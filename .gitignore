@@ -8,3 +8,5 @@ supabase/.branches
 supabase/.temp
 .DS_Store
 *.log
+# Datos personales de rol - NUNCA subir
+reference/*.ics
