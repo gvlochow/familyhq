@@ -179,39 +179,49 @@ export type Database = {
           buffer_llegada_min: number
           buffer_salida_min: number
           created_at: string
+          created_by_member_id: string | null
           display_name: string
           household_id: string
           id: string
           is_owner: boolean
           rol: string
           tipo_horario: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           buffer_llegada_min?: number
           buffer_salida_min?: number
           created_at?: string
+          created_by_member_id?: string | null
           display_name: string
           household_id: string
           id?: string
           is_owner?: boolean
           rol?: string
           tipo_horario?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           buffer_llegada_min?: number
           buffer_salida_min?: number
           created_at?: string
+          created_by_member_id?: string | null
           display_name?: string
           household_id?: string
           id?: string
           is_owner?: boolean
           rol?: string
           tipo_horario?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "members_created_by_member_id_fkey"
+            columns: ["created_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "members_household_id_fkey"
             columns: ["household_id"]
