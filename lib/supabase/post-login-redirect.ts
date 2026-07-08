@@ -8,15 +8,19 @@ import type { Database } from "@/lib/database.types"
  */
 export const APP_HOME_ROUTE = "/"
 export const ONBOARDING_ROUTE = "/onboarding"
+export const ONBOARDING_HORARIO_ROUTE = "/onboarding/horario"
 
 /**
- * Decide a dónde mandar a alguien recién autenticado (login, registro u
- * OAuth): si ya tiene un member (o sea, pertenece a un hogar) va al home de
- * la app; si no, al onboarding de creación de hogar.
+ * Decide a dónde mandar a alguien recién autenticado (login, registro u OAuth),
+ * y también dónde "retoma donde quedó" el onboarding. Es el único lugar donde
+ * vive esta decisión: la usan el formulario de auth (cliente, tras signIn/signUp
+ * con email), el callback de OAuth (servidor, tras intercambiar el code) y las
+ * guardas de las rutas de app y onboarding.
  *
- * Punto único de esta decisión: la usan tanto el formulario de auth (cliente,
- * tras signIn/signUp con email) como el callback de OAuth (servidor, tras
- * intercambiar el code), para que la lógica de routing no quede dispersa.
+ * Escalones, en orden:
+ *   1. Sin member (no pertenece a ningún hogar)  -> crear hogar (onboarding).
+ *   2. Con member pero tipo_horario = 'ninguno'  -> definir tipo de horario.
+ *   3. Con member y tipo_horario ya definido     -> home de la app.
  *
  * Funciona igual con el cliente de servidor o de browser: ambos exponen el
  * mismo tipo `SupabaseClient<Database>`.
@@ -36,7 +40,7 @@ export async function getPostLoginRedirect(
 
   const { data, error } = await supabase
     .from("members")
-    .select("id")
+    .select("tipo_horario")
     .eq("user_id", user.id)
     .maybeSingle()
 
@@ -46,5 +50,15 @@ export async function getPostLoginRedirect(
     return ONBOARDING_ROUTE
   }
 
-  return data ? APP_HOME_ROUTE : ONBOARDING_ROUTE
+  // Sin member -> todavía no tiene hogar: primer paso del onboarding.
+  if (!data) {
+    return ONBOARDING_ROUTE
+  }
+
+  // Tiene hogar pero aún no definió su tipo de horario: siguiente paso.
+  if (data.tipo_horario === "ninguno") {
+    return ONBOARDING_HORARIO_ROUTE
+  }
+
+  return APP_HOME_ROUTE
 }

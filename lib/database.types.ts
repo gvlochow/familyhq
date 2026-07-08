@@ -407,6 +407,7 @@ export type Database = {
     }
     Functions: {
       current_household_id: { Args: never; Returns: string }
+      create_household: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

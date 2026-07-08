@@ -5,8 +5,11 @@ import {
   ONBOARDING_ROUTE,
   getPostLoginRedirect,
 } from "@/lib/supabase/post-login-redirect"
+import { CreateHouseholdForm } from "@/components/onboarding/create-household-form"
 
-// Placeholder: el flujo real de creación de hogar se construye después.
+// Primer paso del onboarding: crear el hogar. La guarda usa la MISMA lógica de
+// routing central que el resto de la app: sin sesión -> login; si ya avanzó más
+// allá de este paso (ya tiene hogar) -> su destino real (tipo de horario u home).
 export default async function OnboardingPage() {
   const supabase = await createClient()
   const {
@@ -17,18 +20,14 @@ export default async function OnboardingPage() {
     redirect("/login")
   }
 
-  // Si ya tiene hogar, no hay nada que onboardear: lo mandamos a su destino real.
   const destino = await getPostLoginRedirect(supabase)
   if (destino !== ONBOARDING_ROUTE) {
     redirect(destino)
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-      <h1 className="font-heading text-xl font-semibold text-foreground">
-        Crear hogar
-      </h1>
-      <p className="text-muted-foreground">Pendiente.</p>
+    <main className="bg-background">
+      <CreateHouseholdForm />
     </main>
   )
 }
