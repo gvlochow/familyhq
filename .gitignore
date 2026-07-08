@@ -10,3 +10,9 @@ supabase/.temp
 *.log
 # Datos personales de rol - NUNCA subir
 reference/*.ics
+
+# Cache de compilacion de TypeScript
+tsconfig.tsbuildinfo
+
+# Config local de Claude Code
+.claude/
