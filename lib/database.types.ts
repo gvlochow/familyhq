@@ -112,6 +112,41 @@ export type Database = {
           },
         ]
       }
+      fixed_schedules: {
+        Row: {
+          created_at: string
+          dia_semana: number
+          hora_fin: string | null
+          hora_inicio: string | null
+          id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          dia_semana: number
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          dia_semana?: number
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_schedules_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       households: {
         Row: {
           created_at: string
@@ -149,6 +184,7 @@ export type Database = {
           id: string
           is_owner: boolean
           rol: string
+          tipo_horario: string
           user_id: string
         }
         Insert: {
@@ -160,6 +196,7 @@ export type Database = {
           id?: string
           is_owner?: boolean
           rol?: string
+          tipo_horario?: string
           user_id: string
         }
         Update: {
@@ -171,6 +208,7 @@ export type Database = {
           id?: string
           is_owner?: boolean
           rol?: string
+          tipo_horario?: string
           user_id?: string
         }
         Relationships: [
