@@ -9,6 +9,8 @@ import type { Database } from "@/lib/database.types"
 export const APP_HOME_ROUTE = "/"
 export const ONBOARDING_ROUTE = "/onboarding"
 export const ONBOARDING_HORARIO_ROUTE = "/onboarding/horario"
+export const ONBOARDING_HORARIO_FIJO_ROUTE = "/onboarding/horario-fijo"
+export const ONBOARDING_CALENDARIO_ROUTE = "/onboarding/calendario"
 
 /**
  * Decide a dónde mandar a alguien recién autenticado (login, registro u OAuth),
@@ -20,7 +22,10 @@ export const ONBOARDING_HORARIO_ROUTE = "/onboarding/horario"
  * Escalones, en orden:
  *   1. Sin member (no pertenece a ningún hogar)  -> crear hogar (onboarding).
  *   2. Con member pero tipo_horario = 'ninguno'  -> definir tipo de horario.
- *   3. Con member y tipo_horario ya definido     -> home de la app.
+ *   3. Con tipo definido pero SIN configurar     -> configuración según el tipo:
+ *        'variable' sin roster_connection -> conectar calendario.
+ *        'fijo'     sin fixed_schedules    -> bloques por día.
+ *   4. Con tipo definido y ya configurado        -> home de la app.
  *
  * Funciona igual con el cliente de servidor o de browser: ambos exponen el
  * mismo tipo `SupabaseClient<Database>`.
@@ -40,7 +45,7 @@ export async function getPostLoginRedirect(
 
   const { data, error } = await supabase
     .from("members")
-    .select("tipo_horario")
+    .select("id, tipo_horario")
     .eq("user_id", user.id)
     .maybeSingle()
 
@@ -58,6 +63,31 @@ export async function getPostLoginRedirect(
   // Tiene hogar pero aún no definió su tipo de horario: siguiente paso.
   if (data.tipo_horario === "ninguno") {
     return ONBOARDING_HORARIO_ROUTE
+  }
+
+  // Tiene tipo definido: falta la configuración correspondiente. Se considera
+  // configurado cuando existe al menos una fila en la tabla de su tipo.
+  if (data.tipo_horario === "variable") {
+    const { data: conexion } = await supabase
+      .from("roster_connections")
+      .select("id")
+      .eq("member_id", data.id)
+      .maybeSingle()
+
+    if (!conexion) {
+      return ONBOARDING_CALENDARIO_ROUTE
+    }
+  } else if (data.tipo_horario === "fijo") {
+    const { data: bloque } = await supabase
+      .from("fixed_schedules")
+      .select("id")
+      .eq("member_id", data.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (!bloque) {
+      return ONBOARDING_HORARIO_FIJO_ROUTE
+    }
   }
 
   return APP_HOME_ROUTE

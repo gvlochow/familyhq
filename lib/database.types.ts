@@ -114,24 +114,33 @@ export type Database = {
       }
       fixed_schedules: {
         Row: {
+          almuerza_en_casa: boolean
           created_at: string
           dia_semana: number
+          hora_almuerzo_fin: string | null
+          hora_almuerzo_inicio: string | null
           hora_fin: string | null
           hora_inicio: string | null
           id: string
           member_id: string
         }
         Insert: {
+          almuerza_en_casa?: boolean
           created_at?: string
           dia_semana: number
+          hora_almuerzo_fin?: string | null
+          hora_almuerzo_inicio?: string | null
           hora_fin?: string | null
           hora_inicio?: string | null
           id?: string
           member_id: string
         }
         Update: {
+          almuerza_en_casa?: boolean
           created_at?: string
           dia_semana?: number
+          hora_almuerzo_fin?: string | null
+          hora_almuerzo_inicio?: string | null
           hora_fin?: string | null
           hora_inicio?: string | null
           id?: string
@@ -406,8 +415,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_household_id: { Args: never; Returns: string }
       create_household: { Args: { p_name: string }; Returns: string }
+      current_household_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
