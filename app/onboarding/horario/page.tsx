@@ -5,10 +5,11 @@ import {
   ONBOARDING_HORARIO_ROUTE,
   getPostLoginRedirect,
 } from "@/lib/supabase/post-login-redirect"
+import { ChooseScheduleForm } from "@/components/onboarding/choose-schedule-form"
 
-// Placeholder: el paso real de "tipo de horario" se construye después. La guarda
-// reusa la lógica de routing central — sin sesión -> login; sin hogar todavía ->
-// crear hogar; si ya definió su tipo de horario -> home.
+// Paso 2 del onboarding: definir el tipo de horario. La guarda usa la MISMA
+// lógica de routing central que el resto de la app: sin sesión -> login; sin
+// hogar todavía -> crear hogar; si ya definió su tipo de horario -> home.
 export default async function OnboardingHorarioPage() {
   const supabase = await createClient()
   const {
@@ -25,11 +26,8 @@ export default async function OnboardingHorarioPage() {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-      <h1 className="font-heading text-xl font-semibold text-foreground">
-        Tipo de horario
-      </h1>
-      <p className="text-muted-foreground">Pendiente.</p>
+    <main className="bg-background">
+      <ChooseScheduleForm />
     </main>
   )
 }

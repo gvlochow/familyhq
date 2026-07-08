@@ -6,7 +6,6 @@ import Image from "next/image"
 import { Loader2Icon } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
-import { getPostLoginRedirect } from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
