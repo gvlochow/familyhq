@@ -1,5 +1,5 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-08_
+_Última actualización: 2026-07-11_
 
 ## Estado actual
 - Clasificador de rol (lib/roster/): completo y validado. 12 tests Vitest (11 casos borde + 1 golden contra reference/salida_julio_2026.txt), confirmado día por día contra el rol real de julio de Pablo.
@@ -32,11 +32,11 @@ _Última actualización: 2026-07-08_
 - Sistema de diseño: tokens de DESIGN.md (paleta #284B63/#A7C4A0/#F2B94B, Manrope/Inter) aplicados globalmente en globals.css/layout.tsx.
 
 ## Sesión anterior
-- Construido el flujo completo de onboarding paso 1 (crear hogar): RPC atómica, pantalla, expansión del routing centralizado a tres escalones.
-- Corregido en revisión (antes de aplicar): el form inicialmente calculaba el destino en el cliente con getPostLoginRedirect + router.push tras el RPC — se cambió a router.refresh() para evitar dejar al usuario varado en caso de fallo parcial (hogar creado pero resolución de destino fallida).
-- Verificado esquema real de members y households antes del push: buffers con default (90/45), tipo_horario con CHECK que permite 'ninguno'/'fijo'/'variable', rol sin CHECK restrictivo — sin bloqueantes.
-- CLI de Supabase no estaba disponible en el PC usado esta sesión; se instaló como devDependency local (`pnpm add -D supabase`, se invoca con `pnpm supabase ...`) en vez de global, ya que Supabase discontinuó la instalación global vía npm.
-- Migración pusheada contra el proyecto remoto real y probada con cuenta real.
+- Migración a un PC nuevo: se reconstruyó `.env.local` (gitignored, no viaja). URL derivada del project-ref (swdnjqdxhautxpdbnhfa); anon key desde el dashboard. Se sumó ICAL_ENCRYPTION_KEY (ver paso 3). Verificado: pnpm/node/node_modules OK, tests 12/12, dev levanta y routing responde.
+- Paso 2 del onboarding (tipo de horario): primera Server Action del repo, dos tarjetas variable/fijo. Commit + merge a main + push.
+- Paso 3 del onboarding (configuración según tipo): ambos caminos (fijo con acordeón + almuerzo + plantilla rápida; variable con cifrado AES-GCM y validación del feed). Probado end-to-end contra el remoto real (variable con un fixture .ics servido localmente vía bypass solo-dev). Migración de almuerzo aplicada al remoto. Commit + merge a main + push (abc40a5).
+- Iteraciones de UI por feedback de prueba: rediseño del form fijo a acordeón (arregla desborde de la hora de término), plantilla "aplicar a todos los días", nota que anticipa la advertencia de Google sobre la dirección secreta.
+- Evaluada analítica de producto (PostHog) — parada, no implementada (ver Pendientes).
 
 ## Decisiones técnicas
 - Ingesta del rol por feed iCal secreto de Google Calendar, no por OAuth de Calendar API, para evitar el proceso de verificación de Google. El export estático de la app iFlight se descartó porque no se actualiza ante cambios de rol. Cron de sync 2-4x/día.
@@ -61,7 +61,9 @@ _Última actualización: 2026-07-08_
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).
 - [ ] Pantallas del producto: calendario familiar, actividades recurrentes, lista de compras (home real, hoy placeholder).
 - [ ] Flujo de invitar integrantes al hogar (mencionado en la copy de la pantalla de crear hogar: "más adelante podrás invitar a tu familia" — aún no construido).
+- [ ] (Parado, sin priorizar — retomar en el piloto) Analítica de producto con PostHog: autocaptura + feature flags + session replay. Esfuerzo bajo (SDK Next.js, provider en root layout). Al implementar: emitir eventos de progreso de onboarding desde post-login-redirect.ts; session replay OFF por defecto; decidir Cloud vs self-hosted (sin Docker acá, self-host es más cuesta arriba).
 
 ## Problemas conocidos
 - Este entorno no tiene chromium-cli ni Playwright instalados: la UI se verifica con build/tsc/eslint y curl contra el HTML server-rendered, no con screenshots reales de browser.
-- CLI de Supabase debe reinstalarse como devDependency (`pnpm add -D supabase`) en cualquier PC nuevo donde se clone el repo; no está disponible global y no se hereda solo con `pnpm install` si no quedó en package.json de una sesión anterior — confirmar que sí quedó registrado como devDependency tras el commit de esta sesión.
+- CLI de Supabase: ya quedó como devDependency en package.json (se invoca con `pnpm supabase`), así que en un PC nuevo `pnpm install` la trae. No existe global (Supabase lo discontinuó).
+- El dev server de Next 16 (Turbopack) filtra memoria en sesiones largas y muere con OOM del heap (llegó a ~16GB). No es del código de la app; basta reiniciarlo. Si reincide seguido, subir el heap con `NODE_OPTIONS=--max-old-space-size=4096` en el script `dev`.
