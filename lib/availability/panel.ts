@@ -8,10 +8,25 @@
  * en menor peso. No es una tabla de eventos.
  */
 import { DateTime } from 'luxon'
-import { TZ_LOCAL } from '../roster/types'
+import { Estado, TZ_LOCAL } from '../roster/types'
 
-/** Los 4 estados materializados en availability_days (coincide con Estado del clasificador). */
-export type EstadoDisponibilidad = 'en_casa' | 'fuera' | 'standby_casa' | 'por_confirmar'
+/**
+ * Los 4 estados materializados en availability_days. La fuente de verdad es el
+ * enum Estado del clasificador: esta unión se deriva de sus valores, así no hay
+ * dos vocabularios que puedan divergir.
+ */
+export type EstadoDisponibilidad = `${Estado}`
+
+const ESTADOS_VALIDOS = new Set<string>(Object.values(Estado))
+
+/**
+ * Convierte un estado crudo de la base a la unión tipada. Un valor inesperado
+ * (drift de esquema, override mal escrito) -> null: la UI degrada a "sin
+ * información" en vez de crashear al indexar el mapa de presentación.
+ */
+function normalizarEstado(crudo: string): EstadoDisponibilidad | null {
+  return ESTADOS_VALIDOS.has(crudo) ? (crudo as EstadoDisponibilidad) : null
+}
 
 /** Un día de la tira semanal. `estado` es null si no hay dato materializado para ese día. */
 export interface DiaPanel {
@@ -24,8 +39,9 @@ export interface PanelSemana {
   /** Estado de hoy; null si no hay dato (rol sin conectar/sincronizar). */
   estadoHoy: EstadoDisponibilidad | null
   /**
-   * Fecha en que el estado de hoy deja de aplicar (primer día distinto en la
-   * ventana). null si el estado se mantiene toda la ventana o no hay estadoHoy.
+   * Fecha en que el estado de hoy deja de aplicar (primer día con estado CONOCIDO
+   * distinto). null si el estado se mantiene toda la ventana, no hay estadoHoy, o
+   * los días siguientes no tienen dato (un hueco no cuenta como cambio).
    */
   cambiaEl: string | null
   dias: DiaPanel[]
@@ -44,7 +60,7 @@ export function construirPanelSemana(
   hoyISO: string,
   dias = 7,
 ): PanelSemana {
-  const porFecha = new Map(rows.map((r) => [r.fecha, r.estado as EstadoDisponibilidad]))
+  const porFecha = new Map(rows.map((r) => [r.fecha, normalizarEstado(r.estado)]))
   const hoy = DateTime.fromISO(hoyISO, { zone: TZ_LOCAL }).startOf('day')
 
   const out: DiaPanel[] = []
@@ -57,7 +73,10 @@ export function construirPanelSemana(
   let cambiaEl: string | null = null
   if (estadoHoy) {
     for (const d of out.slice(1)) {
-      if (d.estado !== estadoHoy) {
+      // Un día SIN dato (estado null) no cuenta como cambio: no sabemos qué pasa
+      // ahí, y anunciar un falso "hasta el X" sobre un hueco confunde. Solo corta
+      // la racha un día con estado conocido y distinto al de hoy.
+      if (d.estado && d.estado !== estadoHoy) {
         cambiaEl = d.fecha
         break
       }

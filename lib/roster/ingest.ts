@@ -58,8 +58,14 @@ export function ventanaPorDefecto(hoyISO?: string): { desde: string; hasta: stri
 
 /**
  * Hash estable de la evidencia de un día. Usa las horas CRUDAS del evento (no las
- * ajustadas por buffer): así cambiar el buffer de un integrante NO invalida sus
- * overrides — solo un cambio real del rol lo hace. Día sin evidencia -> null.
+ * ajustadas por buffer), así que para la mayoría de los días cambiar el buffer no
+ * altera el hash. Día sin evidencia -> null.
+ *
+ * Salvedades conocidas (revisar al construir la UI de corrección manual, ver
+ * PROJECT_LOG): (1) un día FUERA dentro de una rotación multi-día recibe el hash
+ * de TODOS los eventos del bloque, así que un cambio en cualquier tramo invalida
+ * los overrides de los demás días del bloque; (2) en los días borde de un bloque,
+ * el buffer sí decide si el día cae dentro, y ahí puede cambiar la evidencia.
  */
 export function hashEventos(eventos: RosterEvent[]): string | null {
   if (eventos.length === 0) return null

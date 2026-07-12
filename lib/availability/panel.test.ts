@@ -32,20 +32,45 @@ describe('construirPanelSemana', () => {
     expect(p.dias.find((d) => d.fecha === '2026-07-19')!.estado).toBeNull()
   })
 
-  it('un gap tras hoy corta la racha (cambiaEl apunta al día sin dato)', () => {
+  it('un gap tras hoy NO cuenta como cambio (cambiaEl null)', () => {
+    // Solo hoy tiene dato; los días siguientes son huecos. No sabemos si el estado
+    // cambia, así que no se anuncia un falso "hasta el X".
     const p = construirPanelSemana(
       [{ fecha: '2026-07-13', estado: 'fuera' }],
       '2026-07-13',
       3,
     )
     expect(p.estadoHoy).toBe('fuera')
-    expect(p.cambiaEl).toBe('2026-07-14') // primer día distinto = sin dato
+    expect(p.cambiaEl).toBeNull()
+  })
+
+  it('un hueco entre dos días iguales no rompe la racha', () => {
+    // fuera hoy, hueco mañana, fuera pasado -> sigue "toda la semana".
+    const p = construirPanelSemana(
+      [
+        { fecha: '2026-07-13', estado: 'fuera' },
+        { fecha: '2026-07-15', estado: 'fuera' },
+      ],
+      '2026-07-13',
+      3,
+    )
+    expect(p.cambiaEl).toBeNull()
   })
 
   it('sin dato para hoy -> estadoHoy null y cambiaEl null', () => {
     const p = construirPanelSemana(rows, '2026-07-20', 7)
     expect(p.estadoHoy).toBeNull()
     expect(p.cambiaEl).toBeNull()
+  })
+
+  it('un estado desconocido se normaliza a null (no crashea la UI)', () => {
+    const p = construirPanelSemana(
+      [{ fecha: '2026-07-13', estado: 'estado_raro' }],
+      '2026-07-13',
+      2,
+    )
+    expect(p.estadoHoy).toBeNull()
+    expect(p.dias[0].estado).toBeNull()
   })
 
   it('estado constante toda la ventana -> cambiaEl null', () => {

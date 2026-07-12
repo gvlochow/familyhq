@@ -2,10 +2,10 @@ import Image from "next/image"
 import { DateTime } from "luxon"
 
 import { createClient } from "@/lib/supabase/server"
+import { TZ_LOCAL } from "@/lib/roster/types"
 import { construirPanelSemana } from "@/lib/availability/panel"
 import { AvailabilityCard } from "@/components/home/availability-card"
 
-const TZ = "America/Santiago"
 const DIAS = 7
 
 /**
@@ -27,7 +27,7 @@ export default async function HomePage() {
   ])
 
   const integrantes = members ?? []
-  const hoy = DateTime.now().setZone(TZ)
+  const hoy = DateTime.now().setZone(TZ_LOCAL)
   const hoyISO = hoy.toISODate()!
   const hastaISO = hoy.plus({ days: DIAS - 1 }).toISODate()!
 

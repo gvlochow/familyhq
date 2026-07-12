@@ -8,10 +8,10 @@ import {
 } from "lucide-react"
 
 import type { EstadoDisponibilidad, PanelSemana } from "@/lib/availability/panel"
+import { TZ_LOCAL } from "@/lib/roster/types"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-const TZ = "America/Santiago"
 const LETRAS_DIA = ["L", "M", "M", "J", "V", "S", "D"] // luxon weekday 1..7
 
 type EstadoMeta = {
@@ -59,7 +59,7 @@ const META: Record<EstadoDisponibilidad, EstadoMeta> = {
 }
 
 function diaNombre(fecha: string): string {
-  const n = DateTime.fromISO(fecha, { zone: TZ }).setLocale("es").toFormat("cccc")
+  const n = DateTime.fromISO(fecha, { zone: TZ_LOCAL }).setLocale("es").toFormat("cccc")
   return n.charAt(0).toUpperCase() + n.slice(1)
 }
 
@@ -153,7 +153,7 @@ export function AvailabilityCard({
         {/* Resto de la semana, en menor peso. */}
         <div className="grid grid-cols-7 gap-1">
           {panel.dias.map((d) => {
-            const dt = DateTime.fromISO(d.fecha, { zone: TZ })
+            const dt = DateTime.fromISO(d.fecha, { zone: TZ_LOCAL })
             const chip = d.estado ? META[d.estado].chipClass : "bg-muted text-muted-foreground"
             return (
               <div key={d.fecha} className="flex flex-col items-center gap-1">

@@ -21,12 +21,14 @@ import {
  *
  * Por cada roster_connection:
  *   1. Descifra la URL y hace UN fetch del feed (con timeout).
- *   2. Si el hash del feed no cambió desde el último sync -> salta (no reescribe).
- *   3. loadRosterEvents descarta en memoria todo evento sin firma iFlight
+ *   2. loadRosterEvents descarta en memoria todo evento sin firma iFlight
  *      (privacidad, Ley 19.628): jamás se persiste ni se loguea el contenido.
- *   4. Clasifica la ventana [mes actual, +3 meses], resuelve overrides y hace
- *      upsert en availability_days.
- *   5. Actualiza last_fetch_hash + last_synced_at.
+ *   3. Clasifica la ventana [mes actual, +3 meses], resuelve overrides y hace
+ *      upsert en availability_days. Se recalcula SIEMPRE (no se salta por hash
+ *      de feed): la ventana es relativa a hoy y avanza cada mes, y la precedencia
+ *      de override debe reaplicarse en cada corrida aunque el feed no cambie —
+ *      saltar por hash omitía ambas cosas. La clasificación es en memoria y barata.
+ *   4. Actualiza last_fetch_hash (informativo) + last_synced_at.
  *
  * Un feed que falla no tumba al resto: cada conexión va en su propio try/catch.
  */
@@ -39,7 +41,6 @@ const FETCH_TIMEOUT_MS = 12_000
 
 type ResumenConexion =
   | { estado: "actualizada"; dias: number }
-  | { estado: "sin_cambios" }
   | { estado: "error" }
 
 export async function GET(request: Request) {
@@ -52,14 +53,14 @@ export async function GET(request: Request) {
 
   const { data: conexiones, error: connError } = await supabase
     .from("roster_connections")
-    .select("id, member_id, ical_url_encrypted, last_fetch_hash, members(buffer_llegada_min)")
+    .select("id, member_id, ical_url_encrypted, members(buffer_llegada_min)")
 
   if (connError) {
     console.error("[cron/roster] no se pudieron leer las conexiones:", connError.message)
     return NextResponse.json({ error: "error al leer conexiones" }, { status: 500 })
   }
 
-  const resumen = { actualizadas: 0, sinCambios: 0, errores: 0 }
+  const resumen = { actualizadas: 0, errores: 0 }
   const { desde, hasta } = ventanaPorDefecto()
 
   for (const conexion of conexiones ?? []) {
@@ -68,7 +69,6 @@ export async function GET(request: Request) {
     try {
       const r = await procesarConexion(supabase, conexion, desde, hasta)
       if (r.estado === "actualizada") resumen.actualizadas++
-      else if (r.estado === "sin_cambios") resumen.sinCambios++
       else resumen.errores++
     } catch (e) {
       resumen.errores++
@@ -86,7 +86,6 @@ type Conexion = {
   id: string
   member_id: string
   ical_url_encrypted: string
-  last_fetch_hash: string | null
   members: { buffer_llegada_min: number } | null
 }
 
@@ -117,16 +116,10 @@ async function procesarConexion(
     clearTimeout(timeout)
   }
 
-  // 2. Short-circuit: feed sin cambios desde el último sync.
+  // 2. Hash del feed: informativo (se guarda en last_fetch_hash), NO se usa para
+  //    saltar el recálculo — ver nota de cabecera.
   const feedHash = createHash("sha256").update(ics).digest("hex")
   const nowISO = new Date().toISOString()
-  if (feedHash === conexion.last_fetch_hash) {
-    await supabase
-      .from("roster_connections")
-      .update({ last_synced_at: nowISO })
-      .eq("id", conexion.id)
-    return { estado: "sin_cambios" }
-  }
 
   // 3. Parseo con filtrado de privacidad (lo no-iFlight se descarta en memoria).
   const events = loadRosterEvents(ics)
