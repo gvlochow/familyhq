@@ -79,12 +79,29 @@ export function buildDutyBlocks(
   return blocks
 }
 
-/** Estado familiar para un día calendario (en hora local de Santiago). */
-export function estadoPorDia(
+/**
+ * Estado de un día junto con los eventos de rol que lo determinaron.
+ *
+ * `eventos` es la evidencia subyacente de por qué el día quedó en ese estado:
+ * los eventos del bloque de trabajo que lo cubre, o las actividades asignadas a
+ * ese día. La ingesta lo usa para derivar un hash por día (source_event_hash),
+ * base de la regla de override: si esa evidencia cambia, el override se descarta.
+ * Un día libre implícito (EN_CASA por defecto) no tiene evidencia: `eventos` vacío.
+ */
+export interface ClasificacionDia {
+  estado: Estado
+  eventos: RosterEvent[]
+}
+
+/**
+ * Clasifica un día devolviendo estado + los eventos que lo determinaron.
+ * `estadoPorDia` es el atajo que solo mira el estado (lo usa el golden test).
+ */
+export function clasificarDia(
   events: RosterEvent[],
   dia: Dia,
   bufferLlegadaMin: number = DEFAULT_BUFFER_LLEGADA_MIN,
-): Estado {
+): ClasificacionDia {
   const blocks = buildDutyBlocks(events, bufferLlegadaMin)
 
   const dayStart = DateTime.fromObject(
@@ -98,15 +115,17 @@ export function estadoPorDia(
   // 1. Si el día cae dentro de un bloque de trabajo -> FUERA (incluye días intermedios).
   for (const b of blocks) {
     if (b.startUtc.toMillis() < endMs && b.endUtc.toMillis() > startMs) {
-      return Estado.FUERA
+      return { estado: Estado.FUERA, eventos: b.events }
     }
   }
 
   // 2. Si no, mirar la actividad asignada a ese día (DO/DH/HSB/ASB/B).
+  const actividadesDia: RosterEvent[] = []
   const estadosDia: Estado[] = []
   for (const e of events) {
     if (e.kind !== 'activity') continue
     if (e.startUtc.toMillis() < endMs && e.endUtc.toMillis() > startMs) {
+      actividadesDia.push(e)
       estadosDia.push(ACTIVITY_MAP[e.code] ?? Estado.EN_CASA)
     }
   }
@@ -119,12 +138,23 @@ export function estadoPorDia(
       Estado.POR_CONFIRMAR,
       Estado.EN_CASA,
     ]) {
-      if (estadosDia.includes(prioridad)) return prioridad
+      if (estadosDia.includes(prioridad)) {
+        return { estado: prioridad, eventos: actividadesDia }
+      }
     }
   }
 
-  // 3. Sin info -> por defecto en casa (día libre implícito).
-  return Estado.EN_CASA
+  // 3. Sin info -> por defecto en casa (día libre implícito, sin evidencia).
+  return { estado: Estado.EN_CASA, eventos: [] }
+}
+
+/** Estado familiar para un día calendario (en hora local de Santiago). */
+export function estadoPorDia(
+  events: RosterEvent[],
+  dia: Dia,
+  bufferLlegadaMin: number = DEFAULT_BUFFER_LLEGADA_MIN,
+): Estado {
+  return clasificarDia(events, dia, bufferLlegadaMin).estado
 }
 
 /** Estado de un día con su fecha ISO (yyyy-mm-dd). */
