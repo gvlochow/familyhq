@@ -1,5 +1,5 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-11_
+_Última actualización: 2026-07-12_
 
 ## Estado actual
 - Clasificador de rol (lib/roster/): completo y validado. 12 tests Vitest (11 casos borde + 1 golden contra reference/salida_julio_2026.txt), confirmado día por día contra el rol real de julio de Pablo.
@@ -29,6 +29,14 @@ _Última actualización: 2026-07-11_
   - Bypass solo-dev en connectCalendar (`normalizarUrl`/`esProtocoloPermitido`): en NODE_ENV != production se permite además http contra localhost/127.0.0.1, para probar con un fixture .ics servido localmente sin exponer datos reales ni depender de la URL secreta de Google. Imposible que habilite http en producción. Así se probó el camino variable end-to-end.
   - Camino 'variable': **cifrado en la app** — `lib/crypto/secret-box.ts` (server-only, AES-256-GCM, payload base64 iv|tag|ct; clave en ICAL_ENCRYPTION_KEY, 32 bytes base64). Server Action `connectCalendar`: normaliza URL (webcal→https, exige https), fetch único con timeout 12s, valida con loadRosterEvents (descarta lo no-iFlight en memoria) exigiendo ≥1 evento de rol, cifra y upsert en roster_connections (onConflict member_id, last_synced_at null para que el cron sincronice). Form `connect-calendar-form.tsx` con ayuda "¿dónde encuentro esta URL?".
   - **Requiere secreto de infra nuevo**: ICAL_ENCRYPTION_KEY. Ya está en .env.local local y documentado en .env.example. FALTA agregarlo en Vercel (mismo valor, estable en el tiempo: si cambia/se pierde, las URLs cifradas quedan irrecuperables).
+- **Cron de ingesta y clasificación del rol: implementado y verificado (lógica).** Convierte una `roster_connections` conectada en filas materializadas de `availability_days`.
+  - Arquitectura: corre en el runtime de la app (no Edge ni pg_cron) porque el descifrado (secret-box, server-only) y el clasificador viven ahí. Route Handler `app/api/cron/roster/route.ts` (GET, `runtime='nodejs'`, `maxDuration=60`) disparado por Vercel Cron con `Authorization: Bearer $CRON_SECRET`. Endpoint agnóstico al disparador (sirve igual con scheduler externo).
+  - Flujo por conexión (cada una en su try/catch, un feed que falla no tumba al resto): descifra URL → fetch único con timeout 12s → `sha256(ics)`; si el hash == `last_fetch_hash` salta (solo actualiza `last_synced_at`, no reescribe) → `loadRosterEvents` (descarta lo no-iFlight en memoria) → clasifica la ventana → resuelve overrides → upsert en `availability_days` (onConflict member_id,date) → actualiza `last_fetch_hash` + `last_synced_at`. Usa `createAdminClient()` (service_role, BYPASSRLS). Privacidad: en errores solo loguea el id de la conexión, nunca la URL ni el contenido.
+  - Capa de dominio pura y testeable: `lib/roster/ingest.ts` — `ventanaPorDefecto` (mes actual + `MESES_ADELANTE=3` → 4 meses), `construirFilasDisponibilidad` (una fila/día con estado + hash de evidencia), `hashEventos` (sha256 de los eventos que determinaron el día, con horas CRUDAS: cambiar el buffer NO invalida overrides, solo un cambio real del rol), `aplicarOverrides` (regla del esquema: el override gana salvo que el hash de evidencia actual difiera del capturado al crear el override → se descarta). Sin fetch ni Supabase.
+  - Refactor mínimo en `lib/roster/classify.ts`: se extrajo `clasificarDia` (devuelve estado + eventos determinantes, base del hash por día); `estadoPorDia` ahora delega en ella. Golden test intacto (misma salida validada por Pablo).
+  - Tests: 12 unitarios nuevos en `ingest.test.ts` (sintéticos, sin depender del fixture gitignored) — ventana, hash (estable/independiente del orden/cambia con el evento), estados por tipo, y las tres ramas de override. Verificado además con smoke temporal contra el `.ics` real de julio: las 31 filas coinciden día por día con `estadoPorDia`. tsc + lint + 24 tests limpios.
+  - **Requiere secretos de infra nuevos en Vercel**: `CRON_SECRET` (protege el endpoint; en `.env.example`) y que `SUPABASE_SERVICE_ROLE_KEY` esté disponible en el entorno del cron. NO están en `.env.local` local todavía, por eso el run end-to-end contra el remoto queda pendiente de esas claves.
+  - `vercel.json` con cron diario `0 9 * * *` (~05:00 Chile), seguro en plan Hobby (1×/día máx). Para 2-4×/día hace falta plan Pro o scheduler externo.
 - Sistema de diseño: tokens de DESIGN.md (paleta #284B63/#A7C4A0/#F2B94B, Manrope/Inter) aplicados globalmente en globals.css/layout.tsx.
 
 ## Sesión anterior
@@ -55,7 +63,8 @@ _Última actualización: 2026-07-11_
 
 ## Pendientes priorizados
 - [ ] Agregar ICAL_ENCRYPTION_KEY en Vercel (mismo valor que .env.local). Sin esto, el camino 'variable' falla en producción al cifrar. Respaldar la clave.
-- [ ] Cron de ingesta y clasificación del rol sobre roster_connections (usa decryptSecret para leer la URL; escribe availability_days/overrides; setea last_synced_at/last_fetch_hash).
+- [ ] Configurar el cron en su entorno: `CRON_SECRET` (nuevo, generar y poner en Vercel) + asegurar `SUPABASE_SERVICE_ROLE_KEY` en el entorno del cron. Vercel Cron ya está declarado en vercel.json (diario). Falta el run end-to-end real (necesita esas dos claves y un feed accesible; hoy solo se validó la lógica con tests + smoke contra el .ics de julio).
+- [x] ~~Cron de ingesta y clasificación del rol sobre roster_connections~~ — IMPLEMENTADO (ver Estado actual). Usa decryptSecret; escribe availability_days respetando overrides; setea last_synced_at/last_fetch_hash. Falta solo la config de infra de arriba para correrlo en vivo.
 - [ ] Disponibilidad del horario 'fijo': derivar availability desde fixed_schedules (día de trabajo = fuera en la jornada; almuerza_en_casa abre una ventana en_casa a mediodía). Aún no hay derivación fijo -> availability.
 - [ ] Endurecer connectCalendar contra SSRF (hoy exige https pero sigue redirects; validar host/IP de destino y bloquear rangos internos antes de habilitar a más usuarios).
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).
