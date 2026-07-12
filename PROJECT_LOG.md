@@ -1,5 +1,5 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-12_
+_Última actualización: 2026-07-12 (b)_
 
 ## Estado actual
 - Clasificador de rol (lib/roster/): completo y validado. 12 tests Vitest (11 casos borde + 1 golden contra reference/salida_julio_2026.txt), confirmado día por día contra el rol real de julio de Pablo.
@@ -38,6 +38,12 @@ _Última actualización: 2026-07-12_
   - **Verificado end-to-end contra el remoto real (2026-07-12)**: con `CRON_SECRET` + `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`, se apuntó la conexión a un fixture .ics servido localmente y se curleó el endpoint del dev server. Resultados: sin token → 401; con token → `{actualizadas:1, errores:0}`; segunda corrida → `{sinCambios:1}` (short-circuit por hash de feed OK). Se consultó `availability_days` en la base y los 31 días de julio coinciden con la verdad de Pablo (20-jul fuera, 15-jul standby_casa, 16-jul fuera, 3-jul por_confirmar, bloque DO en_casa), todos `source='clasificado'` con hash en los días fuera. El setup/verify fue con tests temporales que se borraron.
   - **Para producción falta en Vercel**: `CRON_SECRET` (nuevo) y `SUPABASE_SERVICE_ROLE_KEY` en el entorno del cron (ya en `.env.local`; en `.env.example` documentado `CRON_SECRET`).
   - `vercel.json` con cron diario `0 9 * * *` (~05:00 Chile), seguro en plan Hobby (1×/día máx). Para 2-4×/día hace falta plan Pro o scheduler externo.
+- **Home real — panel de disponibilidad de la semana: implementado.** Primera pantalla del producto (antes placeholder). Hace visible el payoff del clasificador: `availability_days` → estado familiar legible.
+  - Dominio puro `lib/availability/panel.ts`: `construirPanelSemana(rows, hoyISO, dias=7)` → `{ estadoHoy, cambiaEl, dias[] }`. `cambiaEl` = primer día que difiere del estado de hoy (day-granular, lo que guarda availability_days; no intra-día). Sin Next/Supabase. 6 tests (`panel.test.ts`): estado de hoy, cálculo de cambiaEl, gaps (día sin dato corta la racha), sin dato para hoy, estado constante.
+  - `app/(app)/page.tsx` ahora es Server Component real: lee members + households (RLS del hogar) y `availability_days` de la ventana [hoy, +6] en UN query (`.in(member_ids).gte/lte(date)`), agrupa por integrante y arma el panel con la lógica pura. Usuario logueado primero. Sin estado de cliente. Saludo con el primer nombre + nombre del hogar en el header.
+  - `components/home/availability-card.tsx` (presentación, server): estado ACTUAL en grande + tira de 7 días en menor peso (DESIGN.md: "no es una tabla de eventos"). Tres tratamientos visuales distintos por estado; verde salvia SOLO como superficie; "por_confirmar" con identidad propia (ámbar + reloj de arena). Íconos lucide (House/Plane/PhoneCall/Hourglass/Radio). Estados vacíos proponen acción (variable → "conecta tu rol"; fijo → "llegará pronto"; ver Pendientes: derivación fijo→availability aún no existe).
+  - Verificado: tsc + lint + 30 tests + `pnpm build` (exit 0). Render real confirmado vía ruta de preview temporal (borrada) servida en dev — los 4 estados + el caso sin datos renderizan sin error, con las clases y los subtítulos "hasta cuándo" correctos. No hay screenshot real (sin browser/Playwright en el entorno).
+  - Nota App Router: las carpetas con guion bajo (`app/_x`) son privadas y NO generan ruta (por eso un preview en `_preview` daba 404).
 - Sistema de diseño: tokens de DESIGN.md (paleta #284B63/#A7C4A0/#F2B94B, Manrope/Inter) aplicados globalmente en globals.css/layout.tsx.
 
 ## Sesión anterior
@@ -69,7 +75,8 @@ _Última actualización: 2026-07-12_
 - [ ] Disponibilidad del horario 'fijo': derivar availability desde fixed_schedules (día de trabajo = fuera en la jornada; almuerza_en_casa abre una ventana en_casa a mediodía). Aún no hay derivación fijo -> availability.
 - [ ] Endurecer connectCalendar contra SSRF (hoy exige https pero sigue redirects; validar host/IP de destino y bloquear rangos internos antes de habilitar a más usuarios).
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).
-- [ ] Pantallas del producto: calendario familiar, actividades recurrentes, lista de compras (home real, hoy placeholder).
+- [ ] Pantallas del producto restantes: calendario mensual completo (tab), actividades recurrentes, lista de compras. (El home real con el panel de disponibilidad de la semana YA está — ver Estado actual.)
+- [ ] Nav shell / tab bar (Inicio, Calendario, Tareas, Ajustes) — el home existe pero aún no hay navegación entre pantallas.
 - [ ] Flujo de invitar integrantes al hogar (mencionado en la copy de la pantalla de crear hogar: "más adelante podrás invitar a tu familia" — aún no construido).
 - [ ] (Parado, sin priorizar — retomar en el piloto) Analítica de producto con PostHog: autocaptura + feature flags + session replay. Esfuerzo bajo (SDK Next.js, provider en root layout). Al implementar: emitir eventos de progreso de onboarding desde post-login-redirect.ts; session replay OFF por defecto; decidir Cloud vs self-hosted (sin Docker acá, self-host es más cuesta arriba).
 
