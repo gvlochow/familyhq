@@ -11,6 +11,7 @@ export const ONBOARDING_ROUTE = "/onboarding"
 export const ONBOARDING_HORARIO_ROUTE = "/onboarding/horario"
 export const ONBOARDING_HORARIO_FIJO_ROUTE = "/onboarding/horario-fijo"
 export const ONBOARDING_CALENDARIO_ROUTE = "/onboarding/calendario"
+export const ONBOARDING_INTEGRANTES_ROUTE = "/onboarding/integrantes"
 
 /**
  * Decide a dónde mandar a alguien recién autenticado (login, registro u OAuth),
@@ -25,7 +26,8 @@ export const ONBOARDING_CALENDARIO_ROUTE = "/onboarding/calendario"
  *   3. Con tipo definido pero SIN configurar     -> configuración según el tipo:
  *        'variable' sin roster_connection -> conectar calendario.
  *        'fijo'     sin fixed_schedules    -> bloques por día.
- *   4. Con tipo definido y ya configurado        -> home de la app.
+ *   4. Configurado pero onboarding sin completar -> paso opcional de integrantes.
+ *   5. Configurado y onboarding completado        -> home de la app.
  *
  * Funciona igual con el cliente de servidor o de browser: ambos exponen el
  * mismo tipo `SupabaseClient<Database>`.
@@ -45,7 +47,7 @@ export async function getPostLoginRedirect(
 
   const { data, error } = await supabase
     .from("members")
-    .select("id, tipo_horario")
+    .select("id, tipo_horario, households(onboarding_completed)")
     .eq("user_id", user.id)
     .maybeSingle()
 
@@ -88,6 +90,14 @@ export async function getPostLoginRedirect(
     if (!bloque) {
       return ONBOARDING_HORARIO_FIJO_ROUTE
     }
+  }
+
+  // Configurado. Falta el paso OPCIONAL de integrantes si el hogar todavía no
+  // marcó el onboarding como completado. El dato viene embebido en el select de
+  // arriba (households es to-one vía members.household_id).
+  const hogar = Array.isArray(data.households) ? data.households[0] : data.households
+  if (hogar && !hogar.onboarding_completed) {
+    return ONBOARDING_INTEGRANTES_ROUTE
   }
 
   return APP_HOME_ROUTE

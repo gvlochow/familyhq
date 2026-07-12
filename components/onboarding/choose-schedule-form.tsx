@@ -10,9 +10,9 @@ import type { TipoHorarioSeleccionable } from "@/lib/members/tipo-horario"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-// Paso 2 de 3 del onboarding (la cuenta y el hogar ya existen).
+// Paso 2 de 4 del onboarding (la cuenta y el hogar ya existen).
 const PASO_ACTUAL = 2
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
 type Opcion = {
   valor: TipoHorarioSeleccionable

@@ -12,6 +12,15 @@
  */
 export type TipoHorario = "ninguno" | "fijo" | "variable"
 
+/** Los tres valores válidos de la columna, incluido 'ninguno'. */
+export const TIPOS_HORARIO = ["ninguno", "fijo", "variable"] as const
+
+export function esTipoHorario(valor: unknown): valor is TipoHorario {
+  return (
+    typeof valor === "string" && (TIPOS_HORARIO as readonly string[]).includes(valor)
+  )
+}
+
 /**
  * Los tipos que el usuario efectivamente elige en el paso 2 del onboarding.
  * 'ninguno' queda fuera a propósito: es el estado "sin definir", no una opción.

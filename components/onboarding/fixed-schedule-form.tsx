@@ -17,9 +17,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-// Paso 3 de 3: la cuenta, el hogar y el tipo de horario ya existen.
+// Paso 3 de 4: la cuenta, el hogar y el tipo de horario ya existen.
 const PASO_ACTUAL = 3
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
 const nombreDia = (dia: DiaSemana) =>
   DIAS_SEMANA.find((d) => d.dia === dia)?.nombre ?? ""
