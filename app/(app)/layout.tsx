@@ -5,6 +5,7 @@ import {
   APP_HOME_ROUTE,
   getPostLoginRedirect,
 } from "@/lib/supabase/post-login-redirect"
+import { TabBar } from "@/components/nav/tab-bar"
 
 /**
  * Guarda de acceso para toda la app autenticada (grupo de rutas (app), sin
@@ -34,5 +35,10 @@ export default async function AppLayout({
     redirect(destino)
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <TabBar />
+    </>
+  )
 }

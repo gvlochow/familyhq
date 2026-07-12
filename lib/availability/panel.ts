@@ -24,7 +24,7 @@ const ESTADOS_VALIDOS = new Set<string>(Object.values(Estado))
  * (drift de esquema, override mal escrito) -> null: la UI degrada a "sin
  * información" en vez de crashear al indexar el mapa de presentación.
  */
-function normalizarEstado(crudo: string): EstadoDisponibilidad | null {
+export function normalizarEstado(crudo: string): EstadoDisponibilidad | null {
   return ESTADOS_VALIDOS.has(crudo) ? (crudo as EstadoDisponibilidad) : null
 }
 

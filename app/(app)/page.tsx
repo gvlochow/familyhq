@@ -62,7 +62,7 @@ export default async function HomePage() {
   const saludo = yo ? `Hola, ${yo.display_name.split(" ")[0]}` : "Hola"
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-6 px-6 pt-8 pb-16">
+    <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-6 px-6 pt-8 pb-28">
       <header className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Image

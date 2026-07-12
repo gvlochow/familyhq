@@ -50,6 +50,14 @@ _Última actualización: 2026-07-12 (b)_
   - (robustez, home) `EstadoDisponibilidad` ahora se deriva del enum `Estado` (`\`${Estado}\``, fuente única) y los estados crudos de la base se **normalizan** (desconocido → null): un valor fuera del enum degrada a "sin información" en vez de crashear la home. +1 test.
   - (cleanup) TZ `America/Santiago` dejó de estar hardcodeado en page.tsx y availability-card.tsx: reusan `TZ_LOCAL` de lib/roster/types.
   - Diferidos a la UI de corrección manual (anotados en el código): granularidad del hash de evidencia (un día FUERA usa el hash de todo el bloque de la rotación; el buffer flipea días borde) y manejo defensivo del embed `members(buffer_llegada_min)` si PostgREST lo devolviera como array/null. Ver Pendientes.
+- **Nav shell (tab bar) + calendario mensual: implementado.** La app ya se navega.
+  - `components/nav/tab-bar.tsx` (client, `usePathname` para el activo): barra inferior fija con Inicio · Calendario · Tareas · Ajustes (DESIGN.md, alcance del pulgar), ancho de app (max-w-sm) centrado, safe-area inset. Cableada en `app/(app)/layout.tsx` (la guarda de auth ahora envuelve `{children}` + `<TabBar/>`). Padding inferior `pb-28` en las páginas para no quedar tapadas.
+  - `app/(app)/calendario/page.tsx` (Server Component): grilla mensual del hogar. Mes e integrante seleccionado viven en la URL (`?mes=yyyy-MM` & `?member=id`) → navegación con Links, sin estado de cliente. Chevrons prev/next, selector de integrante (solo si hay >1), etiqueta de mes en español. Lee `availability_days` de la ventana del mes ±7 días (acotado por RLS).
+  - Dominio puro `lib/availability/mes.ts`: `construirGrillaMes(rows, mesRef, hoyISO)` → grilla alineada lunes→domingo, múltiplo de 7, con días de relleno del mes vecino marcados (`delMes`). Reusa `normalizarEstado` (exportada desde panel.ts). 5 tests (`mes.test.ts`).
+  - `components/calendar/month-grid.tsx`: celda por día coloreada por estado + leyenda. Días de relleno atenuados; hoy con ring; sin dato → "Sin información".
+  - **Reuso:** se extrajo el mapa visual de estados a `components/availability/estado-meta.ts` (fuente única `ESTADO_META`); el panel del home y el calendario ahora lo comparten (antes vivía embebido en availability-card).
+  - Placeholders `app/(app)/tareas/page.tsx` y `app/(app)/ajustes/page.tsx` para que las tabs no den 404 (estados vacíos que proponen lo que vendrá).
+  - Verificado: tsc + lint + 37 tests + `pnpm build` (rutas /calendario, /tareas, /ajustes presentes). Render confirmado vía preview temporal (borrada): tab bar + grilla con colores por estado + leyenda; un estado desconocido cae a "Sin información" sin crashear.
 - Sistema de diseño: tokens de DESIGN.md (paleta #284B63/#A7C4A0/#F2B94B, Manrope/Inter) aplicados globalmente en globals.css/layout.tsx.
 
 ## Sesión anterior
@@ -82,8 +90,7 @@ _Última actualización: 2026-07-12 (b)_
 - [ ] Endurecer connectCalendar contra SSRF (hoy exige https pero sigue redirects; validar host/IP de destino y bloquear rangos internos antes de habilitar a más usuarios).
 - [ ] (Con la UI de corrección manual / overrides) Revisar la granularidad del `source_event_hash`: hoy un día FUERA dentro de una rotación multi-día usa el hash de TODO el bloque, así que un cambio en cualquier tramo invalida los overrides de los demás días; y el buffer puede flipear el hash de días borde. Definir un hash verdaderamente por-día. También endurecer el embed `members(buffer_llegada_min)` en el cron (fallback silencioso a 45 si viniera array/null).
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).
-- [ ] Pantallas del producto restantes: calendario mensual completo (tab), actividades recurrentes, lista de compras. (El home real con el panel de disponibilidad de la semana YA está — ver Estado actual.)
-- [ ] Nav shell / tab bar (Inicio, Calendario, Tareas, Ajustes) — el home existe pero aún no hay navegación entre pantallas.
+- [ ] Pantallas del producto restantes: actividades recurrentes y lista de compras (tab Tareas, hoy placeholder); pantalla de Ajustes real (hoy placeholder). (Home con panel de disponibilidad, nav shell y calendario mensual YA están — ver Estado actual.)
 - [ ] Flujo de invitar integrantes al hogar (mencionado en la copy de la pantalla de crear hogar: "más adelante podrás invitar a tu familia" — aún no construido).
 - [ ] (Parado, sin priorizar — retomar en el piloto) Analítica de producto con PostHog: autocaptura + feature flags + session replay. Esfuerzo bajo (SDK Next.js, provider en root layout). Al implementar: emitir eventos de progreso de onboarding desde post-login-redirect.ts; session replay OFF por defecto; decidir Cloud vs self-hosted (sin Docker acá, self-host es más cuesta arriba).
 
