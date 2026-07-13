@@ -6,9 +6,14 @@ import Image from "next/image"
 import { Loader2Icon, ShieldCheckIcon } from "lucide-react"
 
 import { connectCalendar } from "@/app/onboarding/calendario/actions"
+import {
+  ONBOARDING_HORARIO_ROUTE,
+  ONBOARDING_INTEGRANTES_ROUTE,
+} from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
 
 // Paso 3 de 4: la cuenta, el hogar y el tipo de horario ya existen.
 const PASO_ACTUAL = 3
@@ -40,8 +45,8 @@ export function ConnectCalendarForm() {
       return
     }
 
-    // La guarda server-side decide el destino tras el refresh.
-    router.refresh()
+    // Avance explícito al paso de integrantes (la guarda permite volver atrás).
+    router.push(ONBOARDING_INTEGRANTES_ROUTE)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)
@@ -52,6 +57,8 @@ export function ConnectCalendarForm() {
       className="mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10"
     >
       <header className="flex flex-col gap-5">
+        <OnboardingBackLink href={ONBOARDING_HORARIO_ROUTE} />
+
         <div className="flex items-center justify-center gap-2">
           <Image
             src="/brand/Logo_flat.png"
@@ -71,7 +78,7 @@ export function ConnectCalendarForm() {
             <span className="text-xs font-medium text-muted-foreground">
               Paso {PASO_ACTUAL} de {TOTAL_PASOS}
             </span>
-            <span className="text-xs font-medium text-primary">Último paso</span>
+            <span className="text-xs font-medium text-primary">Casi listo</span>
           </div>
           <div
             className="h-1.5 w-full overflow-hidden rounded-full bg-muted"

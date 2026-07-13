@@ -102,3 +102,68 @@ export async function getPostLoginRedirect(
 
   return APP_HOME_ROUTE
 }
+
+/**
+ * Índice ordinal de cada paso del onboarding. Las dos rutas de configuración
+ * (fijo / calendario) comparten índice 2: son el mismo paso, distinto según el
+ * tipo de horario.
+ */
+const ONBOARDING_STEP_INDEX: Record<string, number> = {
+  [ONBOARDING_ROUTE]: 0,
+  [ONBOARDING_HORARIO_ROUTE]: 1,
+  [ONBOARDING_HORARIO_FIJO_ROUTE]: 2,
+  [ONBOARDING_CALENDARIO_ROUTE]: 2,
+  [ONBOARDING_INTEGRANTES_ROUTE]: 3,
+}
+
+/**
+ * Guarda de un paso del onboarding que PERMITE volver atrás. A diferencia del
+ * chequeo estricto (destino === estaRuta), deja renderizar cualquier paso YA
+ * alcanzado, y solo redirige si:
+ *   - no hay sesión -> login;
+ *   - el onboarding ya terminó -> home;
+ *   - se intenta saltar a un paso posterior al actual -> paso actual;
+ *   - es una ruta de config que no corresponde al tipo del usuario -> la correcta.
+ *
+ * Devuelve la ruta a la que redirigir, o null si esta pantalla puede renderizar.
+ * Como habilita volver, el AVANCE de cada paso ya no puede depender del rebote de
+ * la guarda (router.refresh): los formularios navegan explícitamente (router.push).
+ */
+export async function onboardingStepGuard(
+  supabase: SupabaseClient<Database>,
+  estaRuta: string
+): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return "/login"
+
+  const actual = await getPostLoginRedirect(supabase)
+  if (actual === "/login") return "/login"
+  if (actual === APP_HOME_ROUTE) return APP_HOME_ROUTE // onboarding ya terminado
+
+  const idxEsta = ONBOARDING_STEP_INDEX[estaRuta]
+  const idxActual = ONBOARDING_STEP_INDEX[actual]
+
+  // No saltar hacia adelante a un paso que aún no corresponde.
+  if (idxEsta > idxActual) return actual
+
+  // Paso de configuración (idx 2): solo la ruta que corresponde al tipo del
+  // usuario (un 'variable' no debe ver el form de horario fijo y viceversa).
+  if (idxEsta === 2) {
+    const { data: m } = await supabase
+      .from("members")
+      .select("tipo_horario")
+      .eq("user_id", user.id)
+      .maybeSingle()
+    const rutaConfig =
+      m?.tipo_horario === "fijo"
+        ? ONBOARDING_HORARIO_FIJO_ROUTE
+        : m?.tipo_horario === "variable"
+          ? ONBOARDING_CALENDARIO_ROUTE
+          : null
+    if (rutaConfig && estaRuta !== rutaConfig) return rutaConfig
+  }
+
+  return null
+}

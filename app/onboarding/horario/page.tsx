@@ -3,25 +3,18 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import {
   ONBOARDING_HORARIO_ROUTE,
-  getPostLoginRedirect,
+  onboardingStepGuard,
 } from "@/lib/supabase/post-login-redirect"
 import { ChooseScheduleForm } from "@/components/onboarding/choose-schedule-form"
 
-// Paso 2 del onboarding: definir el tipo de horario. La guarda usa la MISMA
-// lógica de routing central que el resto de la app: sin sesión -> login; sin
-// hogar todavía -> crear hogar; si ya definió su tipo de horario -> home.
+// Paso 2 del onboarding: definir el tipo de horario. Guarda que permite volver
+// atrás (onboardingStepGuard): deja renderizar este paso si ya se alcanzó, y
+// redirige si se salta adelante o si el onboarding ya terminó.
 export default async function OnboardingHorarioPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
-
-  const destino = await getPostLoginRedirect(supabase)
-  if (destino !== ONBOARDING_HORARIO_ROUTE) {
+  const destino = await onboardingStepGuard(supabase, ONBOARDING_HORARIO_ROUTE)
+  if (destino) {
     redirect(destino)
   }
 

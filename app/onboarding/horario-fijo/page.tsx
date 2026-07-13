@@ -3,25 +3,18 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import {
   ONBOARDING_HORARIO_FIJO_ROUTE,
-  getPostLoginRedirect,
+  onboardingStepGuard,
 } from "@/lib/supabase/post-login-redirect"
 import { FixedScheduleForm } from "@/components/onboarding/fixed-schedule-form"
 
-// Paso 3, camino 'fijo': definir el horario por día. La guarda usa la MISMA
-// lógica de routing central: solo llega acá quien tiene tipo_horario = 'fijo'
-// sin bloques configurados todavía.
+// Paso 3, camino 'fijo': definir el horario por día. Guarda que permite volver
+// atrás; solo la ve quien tiene tipo_horario = 'fijo' (onboardingStepGuard valida
+// que la ruta de config corresponda al tipo).
 export default async function OnboardingHorarioFijoPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
-
-  const destino = await getPostLoginRedirect(supabase)
-  if (destino !== ONBOARDING_HORARIO_FIJO_ROUTE) {
+  const destino = await onboardingStepGuard(supabase, ONBOARDING_HORARIO_FIJO_ROUTE)
+  if (destino) {
     redirect(destino)
   }
 

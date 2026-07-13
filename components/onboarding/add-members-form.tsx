@@ -13,6 +13,7 @@ import type { Rol } from "@/lib/members/rol"
 import type { TipoHorario } from "@/lib/members/tipo-horario"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
 import { cn } from "@/lib/utils"
 
 // Paso 4 de 4 del onboarding (opcional): la cuenta, el hogar, el tipo de horario
@@ -50,8 +51,10 @@ type IntegranteAgregado = {
 
 export function AddMembersForm({
   yaAgregados,
+  backHref,
 }: {
   yaAgregados: IntegranteAgregado[]
+  backHref: string
 }) {
   const router = useRouter()
 
@@ -102,6 +105,8 @@ export function AddMembersForm({
     <div className="mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10">
       {/* Encabezado: marca + progreso (espejo de los pasos anteriores). */}
       <header className="flex flex-col gap-5">
+        <OnboardingBackLink href={backHref} />
+
         <div className="flex items-center justify-center gap-2">
           <Image
             src="/brand/Logo_flat.png"

@@ -7,6 +7,10 @@ import { CheckIcon, ClockIcon, Loader2Icon, PlaneIcon } from "lucide-react"
 
 import { setTipoHorario } from "@/app/onboarding/horario/actions"
 import type { TipoHorarioSeleccionable } from "@/lib/members/tipo-horario"
+import {
+  ONBOARDING_CALENDARIO_ROUTE,
+  ONBOARDING_HORARIO_FIJO_ROUTE,
+} from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -65,10 +69,14 @@ export function ChooseScheduleForm() {
       return
     }
 
-    // No calculamos el destino: la guarda server-side de la ruta decide tras el
-    // refresh (mismo patrón que crear hogar). Dejamos pending en true: la
-    // navegación desmonta esta pantalla.
-    router.refresh()
+    // Avance explícito al paso de configuración según el tipo (la guarda permite
+    // volver atrás, así que ya no dependemos del rebote de router.refresh).
+    // Dejamos pending en true: la navegación desmonta esta pantalla.
+    router.push(
+      seleccion === "fijo"
+        ? ONBOARDING_HORARIO_FIJO_ROUTE
+        : ONBOARDING_CALENDARIO_ROUTE
+    )
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)
