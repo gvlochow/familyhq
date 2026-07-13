@@ -112,6 +112,47 @@ export type Database = {
           },
         ]
       }
+      availability_segments: {
+        Row: {
+          estado: string
+          fin_utc: string
+          id: string
+          inicio_utc: string
+          member_id: string
+          source: string
+          source_event_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          estado: string
+          fin_utc: string
+          id?: string
+          inicio_utc: string
+          member_id: string
+          source?: string
+          source_event_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          estado?: string
+          fin_utc?: string
+          id?: string
+          inicio_utc?: string
+          member_id?: string
+          source?: string
+          source_event_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_segments_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixed_schedules: {
         Row: {
           almuerza_en_casa: boolean
