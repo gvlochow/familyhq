@@ -3,11 +3,10 @@ import { RadioIcon } from "lucide-react"
 
 import type { EstadoDisponibilidad, PanelSemana } from "@/lib/availability/panel"
 import { TZ_LOCAL } from "@/lib/roster/types"
+import { LETRAS_DIA } from "@/lib/availability/dias"
 import { ESTADO_META } from "@/components/availability/estado-meta"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-
-const LETRAS_DIA = ["L", "M", "M", "J", "V", "S", "D"] // luxon weekday 1..7
 
 function diaNombre(fecha: string): string {
   const n = DateTime.fromISO(fecha, { zone: TZ_LOCAL }).setLocale("es").toFormat("cccc")

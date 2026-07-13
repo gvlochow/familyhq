@@ -3,9 +3,9 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import {
   ONBOARDING_CALENDARIO_ROUTE,
-  ONBOARDING_HORARIO_FIJO_ROUTE,
   ONBOARDING_INTEGRANTES_ROUTE,
   onboardingStepGuard,
+  rutaConfigDeTipo,
 } from "@/lib/supabase/post-login-redirect"
 import { AddMembersForm } from "@/components/onboarding/add-members-form"
 
@@ -32,10 +32,7 @@ export default async function OnboardingIntegrantesPage() {
   const yaAgregados = (members ?? []).filter((m) => m.user_id !== user?.id)
 
   // "Volver" apunta al paso de configuración según el tipo de horario del usuario.
-  const backHref =
-    yo?.tipo_horario === "fijo"
-      ? ONBOARDING_HORARIO_FIJO_ROUTE
-      : ONBOARDING_CALENDARIO_ROUTE
+  const backHref = rutaConfigDeTipo(yo?.tipo_horario) ?? ONBOARDING_CALENDARIO_ROUTE
 
   return (
     <main className="bg-background">

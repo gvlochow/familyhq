@@ -14,6 +14,16 @@ export const ONBOARDING_CALENDARIO_ROUTE = "/onboarding/calendario"
 export const ONBOARDING_INTEGRANTES_ROUTE = "/onboarding/integrantes"
 
 /**
+ * Ruta del paso de configuración según el tipo de horario. Fuente única de ese
+ * mapeo: la usan la guarda, el form de tipo de horario y el "volver" del paso 4.
+ */
+export function rutaConfigDeTipo(tipoHorario: string | null | undefined): string | null {
+  if (tipoHorario === "fijo") return ONBOARDING_HORARIO_FIJO_ROUTE
+  if (tipoHorario === "variable") return ONBOARDING_CALENDARIO_ROUTE
+  return null
+}
+
+/**
  * Decide a dónde mandar a alguien recién autenticado (login, registro u OAuth),
  * y también dónde "retoma donde quedó" el onboarding. Es el único lugar donde
  * vive esta decisión: la usan el formulario de auth (cliente, tras signIn/signUp
@@ -156,12 +166,7 @@ export async function onboardingStepGuard(
       .select("tipo_horario")
       .eq("user_id", user.id)
       .maybeSingle()
-    const rutaConfig =
-      m?.tipo_horario === "fijo"
-        ? ONBOARDING_HORARIO_FIJO_ROUTE
-        : m?.tipo_horario === "variable"
-          ? ONBOARDING_CALENDARIO_ROUTE
-          : null
+    const rutaConfig = rutaConfigDeTipo(m?.tipo_horario)
     if (rutaConfig && estaRuta !== rutaConfig) return rutaConfig
   }
 

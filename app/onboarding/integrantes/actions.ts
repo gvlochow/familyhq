@@ -67,12 +67,18 @@ export async function eliminarIntegrante(memberId: string): Promise<Result> {
   } = await supabase.auth.getUser()
   if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
 
-  const { error } = await supabase
+  const { data: borrados, error } = await supabase
     .from("members")
     .delete()
     .eq("id", memberId)
     .is("user_id", null)
+    .select("id")
   if (error) return { error: "No pudimos eliminar al integrante. Intenta de nuevo." }
+  // .select() devuelve las filas borradas: si no borró ninguna (no era un perfil
+  // administrado, o ya no existe) lo reportamos en vez de fingir éxito.
+  if (!borrados || borrados.length === 0) {
+    return { error: "No se pudo eliminar a ese integrante." }
+  }
 
   return { error: null }
 }

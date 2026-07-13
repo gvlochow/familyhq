@@ -71,6 +71,14 @@ _Última actualización: 2026-07-12 (b)_
   - Botón "Volver" (`components/onboarding/onboarding-back-link.tsx`) en los pasos 3 y 4: paso 3 → tipo de horario; paso 4 → su config según tipo. Copy ajustado: paso 3 dejó de decir "Último paso"/"Finalizar" (ahora "Casi listo"/"Continuar").
   - **Decisión:** NO hay "volver" del paso 2 al 1 (crear hogar): editar el nombre del hogar es tema de Ajustes, no del wizard; evitar eso ahorra hacer el paso 1 reentrante. Si se quisiera, habría que soportar editar el nombre en create-household.
   - Verificado: tsc + lint + 37 tests + build; lógica de la guarda razonada para avanzar / volver 3→2 y 4→3 / no saltar adelante / no reentrar terminado / config por tipo.
+- **Code review (high) de la rama nav+onboarding, fixes aplicados antes de mergear.** 8 ángulos finder + verificación. Confirmado sano lo central (guarda sin sesión preservada, embed households OK, backfill sin regresión, extracción estado-meta sin drift). Arreglado:
+  - (privacidad, Ley 19.628) `setTipoHorario` ahora **borra la config huérfana del otro tipo** al cambiar: variable→fijo elimina la `roster_connections` (URL iCal cifrada, dato sensible) que ya no corresponde; fijo→variable borra `fixed_schedules`. Antes, volver atrás y cambiar de tipo dejaba el secreto colgando sin forma de borrarlo. Verificado e2e con RLS real (el delete bajo sesión de usuario efectivamente elimina la fila).
+  - (UX) `connect-calendar-form` acepta `yaConectado`: al volver atrás al paso variable ya conectado, deja **Continuar sin re-pegar** la URL secreta (antes el input required forzaba re-pegar y re-validar). El fijo ya no tenía el problema.
+  - (robustez) `handleFinalizar` (paso 4) navega explícito con `router.push('/')` en vez de `refresh` — consistente con los otros pasos, sin quedar trabado si el flag recién escrito no se ve en el refetch.
+  - (robustez) `eliminarIntegrante` usa `.select()` para confirmar que borró una fila; si borró 0 (no era perfil administrado) reporta error en vez de fingir éxito.
+  - (cleanup) `rutaConfigDeTipo()` como fuente única del mapeo tipo→ruta de config (estaba en 4 lugares); `LETRAS_DIA` compartido (estaba duplicado en month-grid y availability-card); labels de rol/tipo tipados por enum.
+  - Diferido como deuda (anotado): queries redundantes en `onboardingStepGuard`, extraer un `<OnboardingHeader>` (5 forms repiten el header), y el modelo de onboarding por-hogar vs por-integrante (cuando existan cuentas invitadas).
+  - tsc + lint + 37 tests + build limpios tras los fixes.
 - Sistema de diseño: tokens de DESIGN.md (paleta #284B63/#A7C4A0/#F2B94B, Manrope/Inter) aplicados globalmente en globals.css/layout.tsx.
 
 ## Sesión anterior

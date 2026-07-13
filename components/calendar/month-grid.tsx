@@ -1,9 +1,8 @@
 import type { GrillaMes } from "@/lib/availability/mes"
 import type { EstadoDisponibilidad } from "@/lib/availability/panel"
+import { LETRAS_DIA } from "@/lib/availability/dias"
 import { ESTADO_META } from "@/components/availability/estado-meta"
 import { cn } from "@/lib/utils"
-
-const CABECERA = ["L", "M", "M", "J", "V", "S", "D"]
 
 // Orden de la leyenda (mismo criterio de prioridad del clasificador).
 const LEYENDA: EstadoDisponibilidad[] = [
@@ -18,7 +17,7 @@ export function MonthGrid({ grilla }: { grilla: GrillaMes }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-7 gap-1">
-        {CABECERA.map((letra, i) => (
+        {LETRAS_DIA.map((letra, i) => (
           <span
             key={i}
             className="pb-1 text-center text-[11px] font-medium text-muted-foreground"

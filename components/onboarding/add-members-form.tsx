@@ -12,6 +12,7 @@ import {
 } from "@/app/onboarding/integrantes/actions"
 import type { Rol } from "@/lib/members/rol"
 import type { TipoHorario } from "@/lib/members/tipo-horario"
+import { APP_HOME_ROUTE } from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
@@ -33,11 +34,12 @@ const TIPO_OPCIONES: { valor: TipoHorario; label: string }[] = [
   { valor: "variable", label: "Variable" },
 ]
 
-const ROL_LABEL: Record<string, string> = {
+// Tipados por el enum: exhaustivos y con typos detectables en compilación.
+const ROL_LABEL: Record<Rol, string> = {
   sostenedor: "Sostenedor",
   integrante: "Integrante",
 }
-const TIPO_LABEL: Record<string, string> = {
+const TIPO_LABEL: Record<TipoHorario, string> = {
   ninguno: "Sin horario",
   fijo: "Horario fijo",
   variable: "Variable / turnos",
@@ -109,8 +111,9 @@ export function AddMembersForm({
       setPending(false)
       return
     }
-    // No calculamos el destino: la guarda server-side manda al home tras el refresh.
-    router.refresh()
+    // Avance explícito al home (consistente con los otros pasos; no dependemos de
+    // que el rebote de router.refresh detecte el flag recién escrito).
+    router.push(APP_HOME_ROUTE)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)
@@ -188,7 +191,8 @@ export function AddMembersForm({
                     {m.display_name}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {ROL_LABEL[m.rol] ?? m.rol} · {TIPO_LABEL[m.tipo_horario] ?? m.tipo_horario}
+                    {ROL_LABEL[m.rol as Rol] ?? m.rol} ·{" "}
+                    {TIPO_LABEL[m.tipo_horario as TipoHorario] ?? m.tipo_horario}
                   </span>
                 </span>
                 <button

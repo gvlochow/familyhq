@@ -17,9 +17,27 @@ export default async function OnboardingCalendarioPage() {
     redirect(destino)
   }
 
+  // ¿Ya conectó su calendario? (posible al volver atrás desde el paso 4). Si es
+  // así, el form deja continuar sin re-pegar la URL secreta.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: yo } = await supabase
+    .from("members")
+    .select("id")
+    .eq("user_id", user!.id)
+    .maybeSingle()
+  const { data: conexion } = yo
+    ? await supabase
+        .from("roster_connections")
+        .select("id")
+        .eq("member_id", yo.id)
+        .maybeSingle()
+    : { data: null }
+
   return (
     <main className="bg-background">
-      <ConnectCalendarForm />
+      <ConnectCalendarForm yaConectado={!!conexion} />
     </main>
   )
 }

@@ -19,7 +19,11 @@ import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link
 const PASO_ACTUAL = 3
 const TOTAL_PASOS = 4
 
-export function ConnectCalendarForm() {
+export function ConnectCalendarForm({
+  yaConectado = false,
+}: {
+  yaConectado?: boolean
+}) {
   const router = useRouter()
 
   const [pending, setPending] = useState(false)
@@ -33,6 +37,12 @@ export function ConnectCalendarForm() {
     const url = String(formData.get("ical_url") ?? "").trim()
 
     if (!url) {
+      // Si ya está conectado (volvió atrás a revisar), continuar sin re-pegar.
+      if (yaConectado) {
+        setPending(true)
+        router.push(ONBOARDING_INTEGRANTES_ROUTE)
+        return
+      }
       setError("Pega la dirección iCal de tu calendario para continuar.")
       return
     }
@@ -107,6 +117,14 @@ export function ConnectCalendarForm() {
           </p>
         </div>
 
+        {yaConectado && (
+          <p className="rounded-xl border border-secondary/50 bg-secondary/15 px-4 py-3 text-sm text-muted-foreground">
+            Ya tienes un calendario conectado. Puedes{" "}
+            <span className="text-foreground">Continuar</span>, o pegar una
+            dirección nueva para reemplazarlo.
+          </p>
+        )}
+
         <Field>
           <FieldLabel htmlFor="ical_url">Dirección iCal secreta</FieldLabel>
           <Input
@@ -116,9 +134,9 @@ export function ConnectCalendarForm() {
             inputMode="url"
             placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
             autoComplete="off"
-            autoFocus
+            autoFocus={!yaConectado}
             disabled={pending}
-            required
+            required={!yaConectado}
           />
           {error && <FieldError>{error}</FieldError>}
         </Field>
@@ -159,7 +177,7 @@ export function ConnectCalendarForm() {
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending && <Loader2Icon className="size-4 animate-spin" />}
-        {pending ? "Validando calendario..." : "Conectar calendario"}
+        {pending ? "Un momento..." : yaConectado ? "Continuar" : "Conectar calendario"}
       </Button>
     </form>
   )
