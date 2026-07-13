@@ -5,32 +5,53 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { decryptSecret } from "@/lib/crypto/secret-box"
 import { loadRosterEvents } from "@/lib/roster"
 import {
+  construirSegmentos,
+  limitesVentanaUtc,
+  type Segmento,
+} from "@/lib/roster/segments"
+import {
   aplicarOverrides,
   construirFilasDisponibilidad,
   ventanaPorDefecto,
   type OverrideDia,
 } from "@/lib/roster/ingest"
+import {
+  construirSegmentosFijo,
+  type FilaHorarioFijo,
+} from "@/lib/availability/fijo-segmentos"
 
 /**
- * Cron de ingesta y clasificación del rol (pendiente priorizado del PROJECT_LOG).
+ * Cron de ingesta y materialización de la disponibilidad.
  *
  * Corre en el runtime de la app —no en Edge ni pg_cron— porque el descifrado de
  * la URL (secret-box, server-only) y el clasificador viven acá. Lo dispara Vercel
  * Cron (ver vercel.json) con `Authorization: Bearer $CRON_SECRET`; el endpoint es
  * agnóstico al disparador (sirve igual con un scheduler externo).
  *
- * Por cada roster_connection:
- *   1. Descifra la URL y hace UN fetch del feed (con timeout).
- *   2. loadRosterEvents descarta en memoria todo evento sin firma iFlight
- *      (privacidad, Ley 19.628): jamás se persiste ni se loguea el contenido.
- *   3. Clasifica la ventana [mes actual, +3 meses], resuelve overrides y hace
- *      upsert en availability_days. Se recalcula SIEMPRE (no se salta por hash
- *      de feed): la ventana es relativa a hoy y avanza cada mes, y la precedencia
- *      de override debe reaplicarse en cada corrida aunque el feed no cambie —
- *      saltar por hash omitía ambas cosas. La clasificación es en memoria y barata.
- *   4. Actualiza last_fetch_hash (informativo) + last_synced_at.
+ * Dos pasadas, sobre la misma ventana [mes actual, +3 meses]:
  *
- * Un feed que falla no tumba al resto: cada conexión va en su propio try/catch.
+ *  A) VARIABLE (roster_connections). Por conexión:
+ *     1. Descifra la URL y hace UN fetch del feed (con timeout).
+ *     2. loadRosterEvents descarta en memoria todo evento sin firma iFlight
+ *        (privacidad, Ley 19.628): jamás se persiste ni se loguea el contenido.
+ *     3. Clasifica la ventana. Escribe DOS materializaciones:
+ *        - availability_days (modelo por-día, con overrides) — la UI actual la lee.
+ *        - availability_segments (tramos intra-día) — el nuevo modelo. La UI migra
+ *          en una fase posterior; hoy se pobla para dejar el cron completo.
+ *     Se recalcula SIEMPRE (no se salta por hash de feed): la ventana es relativa
+ *     a hoy y avanza cada mes, y la precedencia de override debe reaplicarse en
+ *     cada corrida. La clasificación es en memoria y barata.
+ *
+ *  B) FIJO (fixed_schedules de members con tipo_horario='fijo'). Expande el
+ *     horario semanal a tramos (jornada FUERA, mañana/tarde/almuerzo EN_CASA) y
+ *     escribe availability_segments. El fijo NO usa availability_days.
+ *
+ * Los tramos se persisten borrando la ventana del integrante y reinsertando (el
+ * upsert no sirve: la clave inicio_utc cambia entre corridas). Nota de override:
+ * los tramos se escriben como 'clasificado'; aplicar overrides sobre tramos se
+ * resuelve junto con la UI de corrección (fase posterior).
+ *
+ * Un integrante que falla no tumba al resto: cada uno va en su propio try/catch.
  */
 
 export const runtime = "nodejs" // usa node:crypto y clientes server-only
@@ -43,6 +64,8 @@ type ResumenConexion =
   | { estado: "actualizada"; dias: number }
   | { estado: "error" }
 
+type Ventana = { desde: string; hasta: string; inicioUtc: string; finUtc: string }
+
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -51,23 +74,52 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
 
-  const { data: conexiones, error: connError } = await supabase
+  const { desde, hasta } = ventanaPorDefecto()
+  const { inicioUtc, finUtc } = limitesVentanaUtc(desde, hasta)
+  const ventana: Ventana = { desde, hasta, inicioUtc, finUtc }
+
+  const variable = await procesarVariables(supabase, ventana)
+  const fijo = await procesarFijos(supabase, ventana)
+
+  return NextResponse.json({
+    ok: true,
+    actualizadas: variable.actualizadas,
+    errores: variable.errores,
+    fijosActualizados: fijo.actualizados,
+    fijosErrores: fijo.errores,
+  })
+}
+
+// =============================================================================
+// A) Pasada VARIABLE (rol irregular vía roster_connections)
+// =============================================================================
+
+type Conexion = {
+  id: string
+  member_id: string
+  ical_url_encrypted: string
+  members: { buffer_llegada_min: number } | null
+}
+
+async function procesarVariables(
+  supabase: ReturnType<typeof createAdminClient>,
+  ventana: Ventana,
+): Promise<{ actualizadas: number; errores: number }> {
+  const { data: conexiones, error } = await supabase
     .from("roster_connections")
     .select("id, member_id, ical_url_encrypted, members(buffer_llegada_min)")
 
-  if (connError) {
-    console.error("[cron/roster] no se pudieron leer las conexiones:", connError.message)
-    return NextResponse.json({ error: "error al leer conexiones" }, { status: 500 })
+  if (error) {
+    console.error("[cron/roster] no se pudieron leer las conexiones:", error.message)
+    return { actualizadas: 0, errores: 0 }
   }
 
   const resumen = { actualizadas: 0, errores: 0 }
-  const { desde, hasta } = ventanaPorDefecto()
-
   for (const conexion of conexiones ?? []) {
     // Nota de privacidad: en errores solo se loguea el id de la conexión, NUNCA
     // la URL ni nada del contenido del calendario.
     try {
-      const r = await procesarConexion(supabase, conexion, desde, hasta)
+      const r = await procesarConexion(supabase, conexion, ventana)
       if (r.estado === "actualizada") resumen.actualizadas++
       else resumen.errores++
     } catch (e) {
@@ -78,23 +130,15 @@ export async function GET(request: Request) {
       )
     }
   }
-
-  return NextResponse.json({ ok: true, ...resumen })
-}
-
-type Conexion = {
-  id: string
-  member_id: string
-  ical_url_encrypted: string
-  members: { buffer_llegada_min: number } | null
+  return resumen
 }
 
 async function procesarConexion(
   supabase: ReturnType<typeof createAdminClient>,
   conexion: Conexion,
-  desde: string,
-  hasta: string,
+  ventana: Ventana,
 ): Promise<ResumenConexion> {
+  const { desde, hasta } = ventana
   const url = decryptSecret(conexion.ical_url_encrypted)
 
   // 1. Fetch del feed con timeout.
@@ -123,9 +167,9 @@ async function procesarConexion(
 
   // 3. Parseo con filtrado de privacidad (lo no-iFlight se descarta en memoria).
   const events = loadRosterEvents(ics)
-
-  // 4. Clasificar la ventana y resolver overrides.
   const buffer = conexion.members?.buffer_llegada_min
+
+  // 4a. Modelo por-día (con overrides) -> availability_days.
   const filasClasificadas = construirFilasDisponibilidad(events, desde, hasta, buffer)
 
   const { data: overridesRaw } = await supabase
@@ -143,7 +187,6 @@ async function procesarConexion(
 
   const filas = aplicarOverrides(filasClasificadas, overrides)
 
-  // 5. Upsert de availability_days (unique member_id, date).
   const { error: upsertError } = await supabase.from("availability_days").upsert(
     filas.map((f) => ({
       member_id: conexion.member_id,
@@ -157,9 +200,14 @@ async function procesarConexion(
   )
 
   if (upsertError) {
-    console.error(`[cron/roster] conexion ${conexion.id}: upsert falló:`, upsertError.message)
+    console.error(`[cron/roster] conexion ${conexion.id}: upsert días falló:`, upsertError.message)
     return { estado: "error" }
   }
+
+  // 4b. Modelo de tramos intra-día -> availability_segments.
+  const segmentos = construirSegmentos(events, desde, hasta, buffer)
+  const okSegs = await escribirSegmentos(supabase, conexion.member_id, segmentos, ventana, nowISO)
+  if (!okSegs) return { estado: "error" }
 
   await supabase
     .from("roster_connections")
@@ -167,4 +215,118 @@ async function procesarConexion(
     .eq("id", conexion.id)
 
   return { estado: "actualizada", dias: filas.length }
+}
+
+// =============================================================================
+// B) Pasada FIJO (horario fijo vía fixed_schedules)
+// =============================================================================
+
+type FilaFixed = {
+  member_id: string
+  dia_semana: number
+  hora_inicio: string | null
+  hora_fin: string | null
+  almuerza_en_casa: boolean
+  hora_almuerzo_inicio: string | null
+  hora_almuerzo_fin: string | null
+}
+
+async function procesarFijos(
+  supabase: ReturnType<typeof createAdminClient>,
+  ventana: Ventana,
+): Promise<{ actualizados: number; errores: number }> {
+  const { data, error } = await supabase
+    .from("fixed_schedules")
+    .select(
+      "member_id, dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin, members!inner(tipo_horario)",
+    )
+    .eq("members.tipo_horario", "fijo")
+
+  if (error) {
+    console.error("[cron/roster] no se pudieron leer los horarios fijos:", error.message)
+    return { actualizados: 0, errores: 0 }
+  }
+
+  // Agrupar las filas semanales por integrante.
+  const porMember = new Map<string, FilaHorarioFijo[]>()
+  for (const f of (data ?? []) as unknown as FilaFixed[]) {
+    const filas = porMember.get(f.member_id) ?? []
+    filas.push({
+      diaSemana: f.dia_semana,
+      horaInicio: f.hora_inicio,
+      horaFin: f.hora_fin,
+      almuerzaEnCasa: f.almuerza_en_casa,
+      horaAlmuerzoInicio: f.hora_almuerzo_inicio,
+      horaAlmuerzoFin: f.hora_almuerzo_fin,
+    })
+    porMember.set(f.member_id, filas)
+  }
+
+  const nowISO = new Date().toISOString()
+  const resumen = { actualizados: 0, errores: 0 }
+  for (const [memberId, filas] of porMember) {
+    try {
+      const segmentos = construirSegmentosFijo(filas, ventana.desde, ventana.hasta)
+      const ok = await escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
+      if (ok) resumen.actualizados++
+      else resumen.errores++
+    } catch (e) {
+      resumen.errores++
+      console.error(
+        `[cron/roster] fallo procesando horario fijo del member ${memberId}:`,
+        e instanceof Error ? e.message : "error desconocido",
+      )
+    }
+  }
+  return resumen
+}
+
+// =============================================================================
+// Persistencia de tramos (compartida por ambas pasadas)
+// =============================================================================
+
+/**
+ * Reemplaza los tramos de un integrante dentro de la ventana: borra los existentes
+ * y reinserta los recalculados. Delete+insert (no upsert) porque la clave de un
+ * tramo es su inicio_utc, que cambia entre corridas. Si el insert fallara tras el
+ * delete, la ventana queda vacía hasta la próxima corrida (el cron es idempotente).
+ */
+async function escribirSegmentos(
+  supabase: ReturnType<typeof createAdminClient>,
+  memberId: string,
+  segmentos: Segmento[],
+  ventana: Ventana,
+  nowISO: string,
+): Promise<boolean> {
+  const { error: delError } = await supabase
+    .from("availability_segments")
+    .delete()
+    .eq("member_id", memberId)
+    .gte("inicio_utc", ventana.inicioUtc)
+    .lt("inicio_utc", ventana.finUtc)
+
+  if (delError) {
+    console.error(`[cron/roster] member ${memberId}: borrado de tramos falló:`, delError.message)
+    return false
+  }
+
+  if (segmentos.length === 0) return true
+
+  const { error: insError } = await supabase.from("availability_segments").insert(
+    segmentos.map((s) => ({
+      member_id: memberId,
+      inicio_utc: s.inicioUtc.toISO()!,
+      fin_utc: s.finUtc.toISO()!,
+      estado: s.estado,
+      source: "clasificado" as const,
+      source_event_hash: null,
+      updated_at: nowISO,
+    })),
+  )
+
+  if (insError) {
+    console.error(`[cron/roster] member ${memberId}: insert de tramos falló:`, insError.message)
+    return false
+  }
+  return true
 }

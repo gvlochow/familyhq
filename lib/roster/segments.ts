@@ -141,8 +141,23 @@ export function construirSegmentos(
   return fusionar(elementales)
 }
 
+/**
+ * Límites UTC de una ventana [desdeISO, hastaISO] de días locales: el inicio del
+ * primer día y el fin (exclusivo) del último, como ISO. Los usa el cron para
+ * borrar los tramos de la ventana antes de reinsertar los recalculados (el
+ * upsert no sirve: la clave inicio_utc cambia entre corridas).
+ */
+export function limitesVentanaUtc(
+  desdeISO: string,
+  hastaISO: string,
+): { inicioUtc: string; finUtc: string } {
+  const inicio = DateTime.fromISO(desdeISO, { zone: TZ_LOCAL }).startOf('day')
+  const fin = DateTime.fromISO(hastaISO, { zone: TZ_LOCAL }).startOf('day').plus({ days: 1 })
+  return { inicioUtc: inicio.toUTC().toISO()!, finUtc: fin.toUTC().toISO()! }
+}
+
 /** Fusiona tramos contiguos del mismo estado en uno solo. */
-function fusionar(segs: Segmento[]): Segmento[] {
+export function fusionar(segs: Segmento[]): Segmento[] {
   const out: Segmento[] = []
   for (const s of segs) {
     const last = out[out.length - 1]
