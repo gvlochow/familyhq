@@ -3,31 +3,41 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import {
   ONBOARDING_CALENDARIO_ROUTE,
-  getPostLoginRedirect,
+  onboardingStepGuard,
 } from "@/lib/supabase/post-login-redirect"
 import { ConnectCalendarForm } from "@/components/onboarding/connect-calendar-form"
 
-// Paso 3, camino 'variable': conectar el feed iCal del rol. La guarda usa la
-// MISMA lógica de routing central: solo llega acá quien tiene tipo_horario =
-// 'variable' sin roster_connection todavía.
+// Paso 3, camino 'variable': conectar el feed iCal del rol. Guarda que permite
+// volver atrás; solo la ve quien tiene tipo_horario = 'variable'.
 export default async function OnboardingCalendarioPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect("/login")
-  }
-
-  const destino = await getPostLoginRedirect(supabase)
-  if (destino !== ONBOARDING_CALENDARIO_ROUTE) {
+  const destino = await onboardingStepGuard(supabase, ONBOARDING_CALENDARIO_ROUTE)
+  if (destino) {
     redirect(destino)
   }
 
+  // ¿Ya conectó su calendario? (posible al volver atrás desde el paso 4). Si es
+  // así, el form deja continuar sin re-pegar la URL secreta.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: yo } = await supabase
+    .from("members")
+    .select("id")
+    .eq("user_id", user!.id)
+    .maybeSingle()
+  const { data: conexion } = yo
+    ? await supabase
+        .from("roster_connections")
+        .select("id")
+        .eq("member_id", yo.id)
+        .maybeSingle()
+    : { data: null }
+
   return (
     <main className="bg-background">
-      <ConnectCalendarForm />
+      <ConnectCalendarForm yaConectado={!!conexion} />
     </main>
   )
 }

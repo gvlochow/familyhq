@@ -37,15 +37,35 @@ export async function setTipoHorario(
     return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
   }
 
+  const { data: yo, error: yoError } = await supabase
+    .from("members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (yoError || !yo) {
+    return { error: "No encontramos tu hogar. Intenta de nuevo." }
+  }
+
   const { error } = await supabase
     .from("members")
     .update({ tipo_horario: tipo })
-    .eq("user_id", user.id)
+    .eq("id", yo.id)
 
   if (error) {
     return {
       error: "No pudimos guardar tu tipo de horario. Intenta de nuevo.",
     }
+  }
+
+  // Al cambiar de tipo (posible al volver atrás en el onboarding), se descarta la
+  // configuración del OTRO tipo para no dejar datos huérfanos. Crítico en el caso
+  // 'variable' -> 'fijo': elimina la URL iCal cifrada (dato sensible, Ley 19.628)
+  // que ya no corresponde. Idempotente: si no hay filas, es un no-op.
+  if (tipo === "fijo") {
+    await supabase.from("roster_connections").delete().eq("member_id", yo.id)
+  } else if (tipo === "variable") {
+    await supabase.from("fixed_schedules").delete().eq("member_id", yo.id)
   }
 
   return { error: null }

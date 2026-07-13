@@ -6,15 +6,24 @@ import Image from "next/image"
 import { Loader2Icon, ShieldCheckIcon } from "lucide-react"
 
 import { connectCalendar } from "@/app/onboarding/calendario/actions"
+import {
+  ONBOARDING_HORARIO_ROUTE,
+  ONBOARDING_INTEGRANTES_ROUTE,
+} from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
 
-// Paso 3 de 3: la cuenta, el hogar y el tipo de horario ya existen.
+// Paso 3 de 4: la cuenta, el hogar y el tipo de horario ya existen.
 const PASO_ACTUAL = 3
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
-export function ConnectCalendarForm() {
+export function ConnectCalendarForm({
+  yaConectado = false,
+}: {
+  yaConectado?: boolean
+}) {
   const router = useRouter()
 
   const [pending, setPending] = useState(false)
@@ -28,6 +37,12 @@ export function ConnectCalendarForm() {
     const url = String(formData.get("ical_url") ?? "").trim()
 
     if (!url) {
+      // Si ya está conectado (volvió atrás a revisar), continuar sin re-pegar.
+      if (yaConectado) {
+        setPending(true)
+        router.push(ONBOARDING_INTEGRANTES_ROUTE)
+        return
+      }
       setError("Pega la dirección iCal de tu calendario para continuar.")
       return
     }
@@ -40,8 +55,8 @@ export function ConnectCalendarForm() {
       return
     }
 
-    // La guarda server-side decide el destino tras el refresh.
-    router.refresh()
+    // Avance explícito al paso de integrantes (la guarda permite volver atrás).
+    router.push(ONBOARDING_INTEGRANTES_ROUTE)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)
@@ -52,6 +67,8 @@ export function ConnectCalendarForm() {
       className="mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10"
     >
       <header className="flex flex-col gap-5">
+        <OnboardingBackLink href={ONBOARDING_HORARIO_ROUTE} />
+
         <div className="flex items-center justify-center gap-2">
           <Image
             src="/brand/Logo_flat.png"
@@ -71,7 +88,7 @@ export function ConnectCalendarForm() {
             <span className="text-xs font-medium text-muted-foreground">
               Paso {PASO_ACTUAL} de {TOTAL_PASOS}
             </span>
-            <span className="text-xs font-medium text-primary">Último paso</span>
+            <span className="text-xs font-medium text-primary">Casi listo</span>
           </div>
           <div
             className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
@@ -100,6 +117,14 @@ export function ConnectCalendarForm() {
           </p>
         </div>
 
+        {yaConectado && (
+          <p className="rounded-xl border border-secondary/50 bg-secondary/15 px-4 py-3 text-sm text-muted-foreground">
+            Ya tienes un calendario conectado. Puedes{" "}
+            <span className="text-foreground">Continuar</span>, o pegar una
+            dirección nueva para reemplazarlo.
+          </p>
+        )}
+
         <Field>
           <FieldLabel htmlFor="ical_url">Dirección iCal secreta</FieldLabel>
           <Input
@@ -109,9 +134,9 @@ export function ConnectCalendarForm() {
             inputMode="url"
             placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
             autoComplete="off"
-            autoFocus
+            autoFocus={!yaConectado}
             disabled={pending}
-            required
+            required={!yaConectado}
           />
           {error && <FieldError>{error}</FieldError>}
         </Field>
@@ -152,7 +177,7 @@ export function ConnectCalendarForm() {
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending && <Loader2Icon className="size-4 animate-spin" />}
-        {pending ? "Validando calendario..." : "Conectar calendario"}
+        {pending ? "Un momento..." : yaConectado ? "Continuar" : "Conectar calendario"}
       </Button>
     </form>
   )

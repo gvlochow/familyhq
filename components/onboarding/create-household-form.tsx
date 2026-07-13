@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 // El onboarding tiene 3 pasos; la cuenta ya está creada, así que arrancamos en
 // el paso 1 (no en 0%) — ver DESIGN.md ("no empieza en 0% si ya hubo pasos").
 const PASO_ACTUAL = 1
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
 export function CreateHouseholdForm() {
   const router = useRouter()

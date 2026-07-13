@@ -7,12 +7,13 @@ import { CheckIcon, ClockIcon, Loader2Icon, PlaneIcon } from "lucide-react"
 
 import { setTipoHorario } from "@/app/onboarding/horario/actions"
 import type { TipoHorarioSeleccionable } from "@/lib/members/tipo-horario"
+import { rutaConfigDeTipo } from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-// Paso 2 de 3 del onboarding (la cuenta y el hogar ya existen).
+// Paso 2 de 4 del onboarding (la cuenta y el hogar ya existen).
 const PASO_ACTUAL = 2
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
 type Opcion = {
   valor: TipoHorarioSeleccionable
@@ -65,10 +66,10 @@ export function ChooseScheduleForm() {
       return
     }
 
-    // No calculamos el destino: la guarda server-side de la ruta decide tras el
-    // refresh (mismo patrón que crear hogar). Dejamos pending en true: la
-    // navegación desmonta esta pantalla.
-    router.refresh()
+    // Avance explícito al paso de configuración según el tipo (la guarda permite
+    // volver atrás, así que ya no dependemos del rebote de router.refresh).
+    // Dejamos pending en true: la navegación desmonta esta pantalla.
+    router.push(rutaConfigDeTipo(seleccion)!)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)

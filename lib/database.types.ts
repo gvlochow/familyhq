@@ -161,6 +161,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          onboarding_completed: boolean
           plan: string
           subscription_ref: string | null
           subscription_status: string | null
@@ -169,6 +170,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          onboarding_completed?: boolean
           plan?: string
           subscription_ref?: string | null
           subscription_status?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          onboarding_completed?: boolean
           plan?: string
           subscription_ref?: string | null
           subscription_status?: string | null

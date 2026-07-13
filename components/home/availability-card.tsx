@@ -1,62 +1,12 @@
 import { DateTime } from "luxon"
-import {
-  HourglassIcon,
-  HouseIcon,
-  PhoneCallIcon,
-  PlaneIcon,
-  RadioIcon,
-} from "lucide-react"
+import { RadioIcon } from "lucide-react"
 
 import type { EstadoDisponibilidad, PanelSemana } from "@/lib/availability/panel"
 import { TZ_LOCAL } from "@/lib/roster/types"
+import { LETRAS_DIA } from "@/lib/availability/dias"
+import { ESTADO_META } from "@/components/availability/estado-meta"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-
-const LETRAS_DIA = ["L", "M", "M", "J", "V", "S", "D"] // luxon weekday 1..7
-
-type EstadoMeta = {
-  label: string
-  Icono: typeof HouseIcon
-  cardClass: string
-  iconWrapClass: string
-  chipClass: string
-}
-
-/**
- * Tres estados = tres tratamientos visuales distintos (DESIGN.md). El verde
- * salvia va SOLO como superficie, nunca como texto. "Por confirmar" tiene su
- * propia identidad (ámbar + reloj de arena), no es un tono de en-casa ni de fuera.
- */
-const META: Record<EstadoDisponibilidad, EstadoMeta> = {
-  en_casa: {
-    label: "En casa",
-    Icono: HouseIcon,
-    cardClass: "bg-secondary text-secondary-foreground",
-    iconWrapClass: "bg-white/40 text-secondary-foreground",
-    chipClass: "bg-secondary text-secondary-foreground",
-  },
-  fuera: {
-    label: "Fuera",
-    Icono: PlaneIcon,
-    cardClass: "bg-primary text-primary-foreground",
-    iconWrapClass: "bg-white/15 text-primary-foreground",
-    chipClass: "bg-primary text-primary-foreground",
-  },
-  standby_casa: {
-    label: "Standby en casa",
-    Icono: PhoneCallIcon,
-    cardClass: "bg-secondary/50 text-secondary-foreground ring-1 ring-primary/20",
-    iconWrapClass: "bg-white/50 text-primary",
-    chipClass: "bg-secondary/60 text-secondary-foreground ring-1 ring-primary/20",
-  },
-  por_confirmar: {
-    label: "Por confirmar",
-    Icono: HourglassIcon,
-    cardClass: "bg-accent/20 text-foreground",
-    iconWrapClass: "bg-accent/30 text-accent-foreground",
-    chipClass: "bg-accent text-accent-foreground",
-  },
-}
 
 function diaNombre(fecha: string): string {
   const n = DateTime.fromISO(fecha, { zone: TZ_LOCAL }).setLocale("es").toFormat("cccc")
@@ -97,7 +47,7 @@ export function AvailabilityCard({
   tipoHorario: string
   panel: PanelSemana
 }) {
-  const meta = panel.estadoHoy ? META[panel.estadoHoy] : null
+  const meta = panel.estadoHoy ? ESTADO_META[panel.estadoHoy] : null
 
   return (
     <Card>
@@ -154,7 +104,7 @@ export function AvailabilityCard({
         <div className="grid grid-cols-7 gap-1">
           {panel.dias.map((d) => {
             const dt = DateTime.fromISO(d.fecha, { zone: TZ_LOCAL })
-            const chip = d.estado ? META[d.estado].chipClass : "bg-muted text-muted-foreground"
+            const chip = d.estado ? ESTADO_META[d.estado].chipClass : "bg-muted text-muted-foreground"
             return (
               <div key={d.fecha} className="flex flex-col items-center gap-1">
                 <span className="text-[10px] font-medium text-muted-foreground">
@@ -166,7 +116,7 @@ export function AvailabilityCard({
                     chip,
                     d.esHoy && "ring-2 ring-foreground/40",
                   )}
-                  title={d.estado ? META[d.estado].label : "Sin información"}
+                  title={d.estado ? ESTADO_META[d.estado].label : "Sin información"}
                 >
                   {dt.day}
                 </span>

@@ -13,13 +13,18 @@ import {
   type BloqueDia,
   type DiaSemana,
 } from "@/lib/members/horario-fijo"
+import {
+  ONBOARDING_HORARIO_ROUTE,
+  ONBOARDING_INTEGRANTES_ROUTE,
+} from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
 import { cn } from "@/lib/utils"
 
-// Paso 3 de 3: la cuenta, el hogar y el tipo de horario ya existen.
+// Paso 3 de 4: la cuenta, el hogar y el tipo de horario ya existen.
 const PASO_ACTUAL = 3
-const TOTAL_PASOS = 3
+const TOTAL_PASOS = 4
 
 const nombreDia = (dia: DiaSemana) =>
   DIAS_SEMANA.find((d) => d.dia === dia)?.nombre ?? ""
@@ -96,15 +101,27 @@ export function FixedScheduleForm() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Plantilla rápida: un rango que se aplica de una vez a todos los días de
-  // trabajo. Después cada día se ajusta individualmente en el acordeón.
+  // Plantilla rápida: un rango (y opcionalmente el almuerzo) que se aplica de una
+  // vez a todos los días de trabajo. Después cada día se ajusta en el acordeón.
   const [plantillaInicio, setPlantillaInicio] = useState("09:00")
   const [plantillaFin, setPlantillaFin] = useState("18:00")
+  const [plantillaAlmuerza, setPlantillaAlmuerza] = useState(false)
+  const [plantillaAlmuerzoInicio, setPlantillaAlmuerzoInicio] = useState("13:00")
+  const [plantillaAlmuerzoFin, setPlantillaAlmuerzoFin] = useState("14:00")
 
   const rangoPlantillaValido =
     esHoraValida(plantillaInicio) &&
     esHoraValida(plantillaFin) &&
     plantillaFin > plantillaInicio
+
+  // Si la plantilla incluye almuerzo, debe ser un rango válido DENTRO de la jornada.
+  const almuerzoPlantillaValido =
+    !plantillaAlmuerza ||
+    (esHoraValida(plantillaAlmuerzoInicio) &&
+      esHoraValida(plantillaAlmuerzoFin) &&
+      plantillaAlmuerzoFin > plantillaAlmuerzoInicio &&
+      plantillaAlmuerzoInicio >= plantillaInicio &&
+      plantillaAlmuerzoFin <= plantillaFin)
 
   const diasQueTrabaja = bloques.filter((b) => b.trabaja).length
 
@@ -115,14 +132,26 @@ export function FixedScheduleForm() {
   }
 
   function aplicarPlantilla() {
-    if (!rangoPlantillaValido) return
+    if (!rangoPlantillaValido || !almuerzoPlantillaValido) return
     setError(null)
     setBloques((prev) =>
-      prev.map((b) =>
-        b.trabaja
-          ? { ...b, horaInicio: plantillaInicio, horaFin: plantillaFin }
-          : b
-      )
+      prev.map((b) => {
+        if (!b.trabaja) return b
+        const base = {
+          ...b,
+          horaInicio: plantillaInicio,
+          horaFin: plantillaFin,
+          almuerzaEnCasa: plantillaAlmuerza,
+        }
+        // El rango de almuerzo solo se copia si la plantilla lo incluye.
+        return plantillaAlmuerza
+          ? {
+              ...base,
+              horaAlmuerzoInicio: plantillaAlmuerzoInicio,
+              horaAlmuerzoFin: plantillaAlmuerzoFin,
+            }
+          : base
+      })
     )
   }
 
@@ -138,8 +167,8 @@ export function FixedScheduleForm() {
       return
     }
 
-    // La guarda server-side decide el destino tras el refresh.
-    router.refresh()
+    // Avance explícito al paso de integrantes (la guarda permite volver atrás).
+    router.push(ONBOARDING_INTEGRANTES_ROUTE)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)
@@ -150,6 +179,8 @@ export function FixedScheduleForm() {
       className="mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10"
     >
       <header className="flex flex-col gap-5">
+        <OnboardingBackLink href={ONBOARDING_HORARIO_ROUTE} />
+
         <div className="flex items-center justify-center gap-2">
           <Image
             src="/brand/Logo_flat.png"
@@ -169,7 +200,7 @@ export function FixedScheduleForm() {
             <span className="text-xs font-medium text-muted-foreground">
               Paso {PASO_ACTUAL} de {TOTAL_PASOS}
             </span>
-            <span className="text-xs font-medium text-primary">Último paso</span>
+            <span className="text-xs font-medium text-primary">Casi listo</span>
           </div>
           <div
             className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
@@ -221,11 +252,46 @@ export function FixedScheduleForm() {
               onChange={setPlantillaFin}
             />
           </div>
+
+          {/* Almuerzo común, opcional: se aplica junto con el horario. */}
+          <div className="flex flex-col gap-3 rounded-lg bg-background/60 p-3">
+            <label className="flex items-center gap-2.5">
+              <Switch
+                checked={plantillaAlmuerza}
+                disabled={pending}
+                onChange={() => setPlantillaAlmuerza((v) => !v)}
+                label="Voy a casa a almorzar todos los días"
+              />
+              <span className="text-sm text-foreground">Voy a casa a almorzar</span>
+            </label>
+            {plantillaAlmuerza && (
+              <div className="grid grid-cols-2 gap-3">
+                <TimeField
+                  label="Desde"
+                  value={plantillaAlmuerzoInicio}
+                  disabled={pending}
+                  onChange={setPlantillaAlmuerzoInicio}
+                />
+                <TimeField
+                  label="Hasta"
+                  value={plantillaAlmuerzoFin}
+                  disabled={pending}
+                  onChange={setPlantillaAlmuerzoFin}
+                />
+              </div>
+            )}
+          </div>
+
           <Button
             type="button"
             variant="outline"
             size="sm"
-            disabled={pending || !rangoPlantillaValido || diasQueTrabaja === 0}
+            disabled={
+              pending ||
+              !rangoPlantillaValido ||
+              !almuerzoPlantillaValido ||
+              diasQueTrabaja === 0
+            }
             onClick={aplicarPlantilla}
           >
             Aplicar a los días que trabajo
@@ -376,7 +442,7 @@ export function FixedScheduleForm() {
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending && <Loader2Icon className="size-4 animate-spin" />}
-        {pending ? "Guardando..." : "Finalizar"}
+        {pending ? "Guardando..." : "Continuar"}
       </Button>
     </form>
   )
