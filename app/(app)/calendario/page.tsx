@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils"
 /**
  * Calendario mensual del hogar. Server Component: el mes y el integrante
  * seleccionado viven en la URL (?mes=yyyy-MM & ?member=id), así la navegación es
- * con Links y sin estado de cliente. Lee availability_days (acotado por RLS).
+ * con Links y sin estado de cliente. Lee los tramos intra-día
+ * (availability_segments) acotados por RLS y resume cada día en la grilla.
  */
 export default async function CalendarioPage({
   searchParams,
@@ -42,20 +43,26 @@ export default async function CalendarioPage({
   const parsed = mes ? DateTime.fromFormat(mes, "yyyy-MM", { zone: TZ_LOCAL }) : null
   const base = (parsed?.isValid ? parsed : hoy).startOf("month")
 
-  const desde = base.minus({ days: 7 }).toISODate()!
-  const hasta = base.endOf("month").plus({ days: 7 }).toISODate()!
+  // Ventana de la grilla (mes ± 7 días de relleno), como instantes UTC para
+  // filtrar los tramos que la solapan.
+  const winInicioUtc = base.minus({ days: 7 }).startOf("day").toUTC().toISO()!
+  const winFinUtc = base.endOf("month").plus({ days: 8 }).startOf("day").toUTC().toISO()!
 
-  const { data: dias } = seleccionado
+  const { data: tramosRaw } = seleccionado
     ? await supabase
-        .from("availability_days")
-        .select("date, estado")
+        .from("availability_segments")
+        .select("inicio_utc, fin_utc, estado")
         .eq("member_id", seleccionado.id)
-        .gte("date", desde)
-        .lte("date", hasta)
+        .lt("inicio_utc", winFinUtc)
+        .gt("fin_utc", winInicioUtc)
     : { data: [] }
 
   const grilla = construirGrillaMes(
-    (dias ?? []).map((d) => ({ fecha: d.date, estado: d.estado })),
+    (tramosRaw ?? []).map((t) => ({
+      inicioUtc: t.inicio_utc,
+      finUtc: t.fin_utc,
+      estado: t.estado,
+    })),
     base.toFormat("yyyy-MM"),
     hoy.toISODate()!,
   )

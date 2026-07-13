@@ -23,7 +23,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { estadosDelMes, loadRosterEvents } from './index'
+import type { EstadoDia } from './classify'
+import { estadosDelMes, estadosDelMesDesdeSegmentos, loadRosterEvents } from './index'
 
 const REFERENCE = join(process.cwd(), 'reference')
 const ICS = join(REFERENCE, 'p.vonlochow.r@gmail.com.ics')
@@ -31,23 +32,36 @@ const GOLDEN = join(REFERENCE, 'salida_julio_2026.txt')
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-it('julio 2026 completo es idéntico a la salida validada por Pablo', () => {
-  const events = loadRosterEvents(readFileSync(ICS, 'utf-8'))
-
-  // Reproducimos el formato exacto del golden (ver __main__ de roster_classifier.py):
-  //   "Eventos de rol (filtrados): N" + una línea "  yyyy-mm-dd Ddd: estado" por día.
-  const got = [`Eventos de rol (filtrados): ${events.length}`]
-  for (const dia of estadosDelMes(events, 2026, 7)) {
+/** Formatea el mes con el formato exacto del golden (ver __main__ de roster_classifier.py). */
+function formatear(numEventos: number, dias: EstadoDia[]): string[] {
+  const out = [`Eventos de rol (filtrados): ${numEventos}`]
+  for (const dia of dias) {
     const [y, m, d] = dia.fecha.split('-').map(Number)
     const wd = DOW[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
-    got.push(`  ${dia.fecha} ${wd}: ${dia.estado}`)
+    out.push(`  ${dia.fecha} ${wd}: ${dia.estado}`)
   }
+  return out
+}
 
-  const expected = readFileSync(GOLDEN, 'utf-8')
+function golden(): string[] {
+  return readFileSync(GOLDEN, 'utf-8')
     .replace(/\r\n/g, '\n') // el golden puede venir con CRLF en Windows
     .trimEnd()
     .split('\n')
+}
 
+it('julio 2026 completo es idéntico a la salida validada por Pablo', () => {
+  const events = loadRosterEvents(readFileSync(ICS, 'utf-8'))
+  const got = formatear(events.length, estadosDelMes(events, 2026, 7))
   // toEqual sobre arrays de líneas: el diff señala exactamente qué día cambió.
-  expect(got).toEqual(expected)
+  expect(got).toEqual(golden())
+})
+
+// REGLA DE ORO de la re-arquitectura a tramos intra-día: el estado por-día derivado
+// DESDE los segmentos debe seguir idéntico al golden. La granularidad cambió; la
+// verdad de Pablo, no. Si este test falla, la re-arquitectura introdujo un bug.
+it('julio 2026 derivado desde los tramos intra-día también es idéntico al golden', () => {
+  const events = loadRosterEvents(readFileSync(ICS, 'utf-8'))
+  const got = formatear(events.length, estadosDelMesDesdeSegmentos(events, 2026, 7))
+  expect(got).toEqual(golden())
 })

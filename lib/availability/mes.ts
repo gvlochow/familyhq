@@ -1,12 +1,13 @@
 /**
  * Modelo de vista de la grilla mensual del calendario. PURO: sin Next.js ni
- * Supabase. Toma las filas de availability_days de un integrante y arma una
- * grilla alineada de lunes a domingo, con los días de relleno del mes anterior
- * y siguiente para completar las semanas.
+ * Supabase. Toma los tramos intra-día de un integrante y arma una grilla alineada
+ * de lunes a domingo, con los días de relleno del mes anterior y siguiente para
+ * completar las semanas. Cada celda resume su día por dominancia de duración.
  */
 import { DateTime } from 'luxon'
 import { TZ_LOCAL } from '../roster/types'
-import { normalizarEstado, type EstadoDisponibilidad } from './panel'
+import { resumirDia, type TramoVista } from './dia-resumen'
+import type { EstadoDisponibilidad } from './estado'
 
 export interface DiaMes {
   fecha: string // yyyy-mm-dd (local Santiago)
@@ -28,11 +29,10 @@ export interface GrillaMes {
  * `hoyISO` marca el día de hoy. Las fechas se manejan en America/Santiago.
  */
 export function construirGrillaMes(
-  rows: { fecha: string; estado: string }[],
+  tramos: TramoVista[],
   mesRef: string,
   hoyISO: string,
 ): GrillaMes {
-  const porFecha = new Map(rows.map((r) => [r.fecha, normalizarEstado(r.estado)]))
   const base = DateTime.fromISO(mesRef, { zone: TZ_LOCAL })
 
   const inicioMes = base.startOf('month')
@@ -47,7 +47,7 @@ export function construirGrillaMes(
     dias.push({
       fecha,
       dia: d.day,
-      estado: porFecha.get(fecha) ?? null,
+      estado: resumirDia(tramos, fecha),
       delMes: d.month === inicioMes.month && d.year === inicioMes.year,
       esHoy: fecha === hoyISO,
     })

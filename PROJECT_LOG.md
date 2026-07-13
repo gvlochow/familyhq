@@ -1,14 +1,15 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-13_
+_Última actualización: 2026-07-13 (re-arquitectura de disponibilidad a tramos intra-día, Fases 1-3)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**Re-arquitectura del modelo de disponibilidad: de estado-por-día a segmentos intra-día.** APROBADO por el usuario; aún NO implementado. Arrancar por la **Fase 1** en una rama nueva.
+**Re-arquitectura de disponibilidad a tramos intra-día: COMPLETA (Fases 1-3).** En la rama `feat/disponibilidad-segmentos` (commits 243dcbc, c6fa7a4, a642521, 5f9cc0a), **sin mergear a main todavía**. Próximos pasos: (1) code-review de la rama y merge a main; (2) config de Vercel para producción.
 
-- **Qué y por qué:** `availability_days` (un estado por día) es lossy para AMBOS segmentos. Caso gatillo (del usuario): un crew que aterriza a la 1am queda "fuera" el día entero. Se pasa a **tramos `(desde, hasta, estado)`** por integrante, para variable y fijo. Habilita además el panel "fuera hasta el sáb 15:00" de DESIGN.md. (Detalle completo en la memoria `intra-day-availability-model`.)
-- **Fase 1 (empezar acá):** modelo de segmentos + migración (reemplaza/deprecia availability_days) + el clasificador (lib/roster) emitiendo tramos. **Regla de oro:** derivar el estado por-día desde los tramos y verificar que sigue IDÉNTICO al golden de julio (`reference/salida_julio_2026.txt`). La lógica de detección no cambia, solo la granularidad. Sin tocar UI todavía. Revisar con el usuario antes de la Fase 2.
-- **Fase 2:** cron escribe tramos + derivación fijo→segmentos desde `fixed_schedules`.
-- **Fase 3:** UI (home con "hasta HH:MM"; calendario con resumen por día — pensar cómo resume la celda del mes: el día del aterrizaje a la 1am debe leerse "mayormente en casa").
-- **Estado operativo al cerrar:** `main` @ `a66f238` (todo mergeado y pusheado). Server de producción corriendo en localhost:3000 (`pnpm start`). Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026` (para caminar el onboarding; se resetea borrando su household con un script admin temporal). NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía (pendiente para cuando se despliegue).
+- **Qué se hizo:** `availability_days` (un estado por día) era lossy para ambos segmentos (un crew que aterriza a la 1am quedaba "fuera" el día entero). Se reemplazó por **tramos `(inicio_utc, fin_utc, estado)`** por integrante (`availability_segments`), para variable y fijo. Detalle completo en la memoria `intra-day-availability-model`.
+  - **Fase 1** (243dcbc): `lib/roster/segments.ts` (modelo + `construirSegmentos` por precedencia-por-instante + derivación por-día); 2º golden test derivando el día desde tramos = idéntico a julio. Migración aditiva `availability_segments`.
+  - **Fase 2** (c6fa7a4): el cron materializa tramos en dos pasadas — variable (`construirSegmentos`) y fijo nueva (`lib/availability/fijo-segmentos.ts` expande `fixed_schedules`). Verificado e2e (member fijo L-V 09-18 → 177 tramos).
+  - **Fase 3** (a642521 + 5f9cc0a): home y calendario leen tramos; home con estado de AHORA + "hasta HH:MM"; celda del calendario resume el día por **precedencia con piso** (`dia-resumen.ts`: gana el estado de mayor precedencia que dure ≥3h; un fuera marginal como el aterrizaje nocturno no alcanza el piso → "en casa", pero un 9-18 sí → "fuera"). `availability_days` **DROPEADA** del remoto; `ingest.ts` recortado; `availability_overrides` conservada (override-sobre-tramos = feature futura).
+- **OJO pendiente:** el feed variable de prueba (fixture .ics) no está sirviéndose, así que el member variable no tiene tramos hasta que el cron corra con un feed real. En la UI ese integrante se lee "sin información" hasta entonces (esperado tras el drop).
+- **Estado operativo al cerrar:** rama `feat/disponibilidad-segmentos` @ `5f9cc0a`, verde (tsc + lint + 49 tests + build), remoto ya con las 3 migraciones aplicadas. Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía (pendiente para cuando se despliegue).
 - **Recordatorios de tono/tooling:** sin voseo (usar "tú"); pnpm (no npm); Supabase remoto sin Docker (migraciones con `pnpm supabase db push --linked`, types con `gen types --linked`); vitest no resuelve `@/` ni `server-only` y `.env.local` es CRLF/LF mixto (ver memorias).
 
 ## Estado actual
@@ -117,7 +118,9 @@ _Última actualización: 2026-07-13_
 - [ ] Agregar ICAL_ENCRYPTION_KEY en Vercel (mismo valor que .env.local). Sin esto, el camino 'variable' falla en producción al cifrar. Respaldar la clave.
 - [ ] Configurar el cron en producción (Vercel): agregar `CRON_SECRET` y `SUPABASE_SERVICE_ROLE_KEY` en las env vars del proyecto. Vercel Cron ya declarado en vercel.json (diario 09:00 UTC). Plan Hobby = 1×/día máx; para 2-4×/día, plan Pro o scheduler externo.
 - [x] ~~Cron de ingesta y clasificación del rol sobre roster_connections~~ — IMPLEMENTADO Y VERIFICADO END-TO-END (ver Estado actual). Usa decryptSecret; escribe availability_days respetando overrides; setea last_synced_at/last_fetch_hash. Solo falta la config de infra en Vercel.
-- [ ] **Disponibilidad del horario 'fijo'** — ABSORBIDO por la re-arquitectura a segmentos intra-día (ver "PRÓXIMO PASO" arriba). El fijo se deriva a tramos en la Fase 2. Ya no se hace como derivación separada al modelo por-día.
+- [x] ~~**Disponibilidad del horario 'fijo'**~~ — HECHO en la Fase 2 de la re-arquitectura: `lib/availability/fijo-segmentos.ts` deriva `fixed_schedules` a tramos intra-día que el cron materializa en `availability_segments`.
+- [ ] **Merge de `feat/disponibilidad-segmentos` a main** (re-arquitectura intra-día, Fases 1-3). Considerar un code-review de la rama antes.
+- [ ] **Override sobre tramos**: `availability_overrides` quedó inerte tras dropear availability_days (su regla por-hash era por-día). Rediseñar para operar sobre tramos cuando exista la UI de corrección manual.
 - [ ] Endurecer connectCalendar contra SSRF (hoy exige https pero sigue redirects; validar host/IP de destino y bloquear rangos internos antes de habilitar a más usuarios).
 - [ ] (Con la UI de corrección manual / overrides) Revisar la granularidad del `source_event_hash`: hoy un día FUERA dentro de una rotación multi-día usa el hash de TODO el bloque, así que un cambio en cualquier tramo invalida los overrides de los demás días; y el buffer puede flipear el hash de días borde. Definir un hash verdaderamente por-día. También endurecer el embed `members(buffer_llegada_min)` en el cron (fallback silencioso a 45 si viniera array/null).
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).

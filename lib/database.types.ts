@@ -39,44 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      availability_days: {
-        Row: {
-          date: string
-          estado: string
-          id: string
-          member_id: string
-          source: string
-          source_event_hash: string | null
-          updated_at: string
-        }
-        Insert: {
-          date: string
-          estado: string
-          id?: string
-          member_id: string
-          source?: string
-          source_event_hash?: string | null
-          updated_at?: string
-        }
-        Update: {
-          date?: string
-          estado?: string
-          id?: string
-          member_id?: string
-          source?: string
-          source_event_hash?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "availability_days_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       availability_overrides: {
         Row: {
           created_at: string
@@ -105,6 +67,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "availability_overrides_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_segments: {
+        Row: {
+          estado: string
+          fin_utc: string
+          id: string
+          inicio_utc: string
+          member_id: string
+          source: string
+          source_event_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          estado: string
+          fin_utc: string
+          id?: string
+          inicio_utc: string
+          member_id: string
+          source?: string
+          source_event_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          estado?: string
+          fin_utc?: string
+          id?: string
+          inicio_utc?: string
+          member_id?: string
+          source?: string
+          source_event_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_segments_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
