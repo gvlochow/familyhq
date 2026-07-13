@@ -1,5 +1,15 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-12 (b)_
+_Última actualización: 2026-07-13_
+
+## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
+**Re-arquitectura del modelo de disponibilidad: de estado-por-día a segmentos intra-día.** APROBADO por el usuario; aún NO implementado. Arrancar por la **Fase 1** en una rama nueva.
+
+- **Qué y por qué:** `availability_days` (un estado por día) es lossy para AMBOS segmentos. Caso gatillo (del usuario): un crew que aterriza a la 1am queda "fuera" el día entero. Se pasa a **tramos `(desde, hasta, estado)`** por integrante, para variable y fijo. Habilita además el panel "fuera hasta el sáb 15:00" de DESIGN.md. (Detalle completo en la memoria `intra-day-availability-model`.)
+- **Fase 1 (empezar acá):** modelo de segmentos + migración (reemplaza/deprecia availability_days) + el clasificador (lib/roster) emitiendo tramos. **Regla de oro:** derivar el estado por-día desde los tramos y verificar que sigue IDÉNTICO al golden de julio (`reference/salida_julio_2026.txt`). La lógica de detección no cambia, solo la granularidad. Sin tocar UI todavía. Revisar con el usuario antes de la Fase 2.
+- **Fase 2:** cron escribe tramos + derivación fijo→segmentos desde `fixed_schedules`.
+- **Fase 3:** UI (home con "hasta HH:MM"; calendario con resumen por día — pensar cómo resume la celda del mes: el día del aterrizaje a la 1am debe leerse "mayormente en casa").
+- **Estado operativo al cerrar:** `main` @ `a66f238` (todo mergeado y pusheado). Server de producción corriendo en localhost:3000 (`pnpm start`). Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026` (para caminar el onboarding; se resetea borrando su household con un script admin temporal). NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía (pendiente para cuando se despliegue).
+- **Recordatorios de tono/tooling:** sin voseo (usar "tú"); pnpm (no npm); Supabase remoto sin Docker (migraciones con `pnpm supabase db push --linked`, types con `gen types --linked`); vitest no resuelve `@/` ni `server-only` y `.env.local` es CRLF/LF mixto (ver memorias).
 
 ## Estado actual
 - Clasificador de rol (lib/roster/): completo y validado. 12 tests Vitest (11 casos borde + 1 golden contra reference/salida_julio_2026.txt), confirmado día por día contra el rol real de julio de Pablo.
@@ -107,7 +117,7 @@ _Última actualización: 2026-07-12 (b)_
 - [ ] Agregar ICAL_ENCRYPTION_KEY en Vercel (mismo valor que .env.local). Sin esto, el camino 'variable' falla en producción al cifrar. Respaldar la clave.
 - [ ] Configurar el cron en producción (Vercel): agregar `CRON_SECRET` y `SUPABASE_SERVICE_ROLE_KEY` en las env vars del proyecto. Vercel Cron ya declarado en vercel.json (diario 09:00 UTC). Plan Hobby = 1×/día máx; para 2-4×/día, plan Pro o scheduler externo.
 - [x] ~~Cron de ingesta y clasificación del rol sobre roster_connections~~ — IMPLEMENTADO Y VERIFICADO END-TO-END (ver Estado actual). Usa decryptSecret; escribe availability_days respetando overrides; setea last_synced_at/last_fetch_hash. Solo falta la config de infra en Vercel.
-- [ ] Disponibilidad del horario 'fijo': derivar availability desde fixed_schedules (día de trabajo = fuera en la jornada; almuerza_en_casa abre una ventana en_casa a mediodía). Aún no hay derivación fijo -> availability.
+- [ ] **Disponibilidad del horario 'fijo'** — ABSORBIDO por la re-arquitectura a segmentos intra-día (ver "PRÓXIMO PASO" arriba). El fijo se deriva a tramos en la Fase 2. Ya no se hace como derivación separada al modelo por-día.
 - [ ] Endurecer connectCalendar contra SSRF (hoy exige https pero sigue redirects; validar host/IP de destino y bloquear rangos internos antes de habilitar a más usuarios).
 - [ ] (Con la UI de corrección manual / overrides) Revisar la granularidad del `source_event_hash`: hoy un día FUERA dentro de una rotación multi-día usa el hash de TODO el bloque, así que un cambio en cualquier tramo invalida los overrides de los demás días; y el buffer puede flipear el hash de días borde. Definir un hash verdaderamente por-día. También endurecer el embed `members(buffer_llegada_min)` en el cron (fallback silencioso a 45 si viniera array/null).
 - [ ] Flujo de vinculación de cuenta para un perfil sin login que luego se registra (dispara el update de user_id, ya blindado por trigger).
