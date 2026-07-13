@@ -56,6 +56,28 @@ export async function agregarIntegrante(input: {
 }
 
 /**
+ * Elimina un integrante agregado (perfil administrado). Solo borra perfiles sin
+ * cuenta (user_id null): un integrante con cuenta propia no se elimina desde
+ * acá. La RLS de members (members_delete) acota al hogar propio.
+ */
+export async function eliminarIntegrante(memberId: string): Promise<Result> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
+
+  const { error } = await supabase
+    .from("members")
+    .delete()
+    .eq("id", memberId)
+    .is("user_id", null)
+  if (error) return { error: "No pudimos eliminar al integrante. Intenta de nuevo." }
+
+  return { error: null }
+}
+
+/**
  * Marca el onboarding del hogar como completado (households.onboarding_completed).
  * Lo llaman "Continuar" y "Omitir por ahora": ambos cierran el onboarding. Tras
  * esto, getPostLoginRedirect deja de mandar al paso de integrantes y el usuario

@@ -3,11 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Loader2Icon, PlusIcon, UserIcon } from "lucide-react"
+import { Loader2Icon, PlusIcon, Trash2Icon, UserIcon } from "lucide-react"
 
 import {
   agregarIntegrante,
   completarOnboarding,
+  eliminarIntegrante,
 } from "@/app/onboarding/integrantes/actions"
 import type { Rol } from "@/lib/members/rol"
 import type { TipoHorario } from "@/lib/members/tipo-horario"
@@ -82,6 +83,19 @@ export function AddMembersForm({
     setNombre("")
     setRol("integrante")
     setTipoHorario("ninguno")
+    setPending(false)
+    router.refresh()
+  }
+
+  async function handleEliminar(id: string) {
+    setError(null)
+    setPending(true)
+    const { error: actionError } = await eliminarIntegrante(id)
+    if (actionError) {
+      setError(actionError)
+      setPending(false)
+      return
+    }
     setPending(false)
     router.refresh()
   }
@@ -169,7 +183,7 @@ export function AddMembersForm({
                 >
                   <UserIcon className="size-5" />
                 </span>
-                <span className="flex flex-col">
+                <span className="flex flex-1 flex-col">
                   <span className="text-sm font-medium text-foreground">
                     {m.display_name}
                   </span>
@@ -177,6 +191,15 @@ export function AddMembersForm({
                     {ROL_LABEL[m.rol] ?? m.rol} · {TIPO_LABEL[m.tipo_horario] ?? m.tipo_horario}
                   </span>
                 </span>
+                <button
+                  type="button"
+                  onClick={() => handleEliminar(m.id)}
+                  disabled={pending}
+                  aria-label={`Eliminar a ${m.display_name}`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                >
+                  <Trash2Icon className="size-4" />
+                </button>
               </li>
             ))}
           </ul>

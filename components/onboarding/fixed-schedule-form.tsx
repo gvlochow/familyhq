@@ -101,15 +101,27 @@ export function FixedScheduleForm() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Plantilla rápida: un rango que se aplica de una vez a todos los días de
-  // trabajo. Después cada día se ajusta individualmente en el acordeón.
+  // Plantilla rápida: un rango (y opcionalmente el almuerzo) que se aplica de una
+  // vez a todos los días de trabajo. Después cada día se ajusta en el acordeón.
   const [plantillaInicio, setPlantillaInicio] = useState("09:00")
   const [plantillaFin, setPlantillaFin] = useState("18:00")
+  const [plantillaAlmuerza, setPlantillaAlmuerza] = useState(false)
+  const [plantillaAlmuerzoInicio, setPlantillaAlmuerzoInicio] = useState("13:00")
+  const [plantillaAlmuerzoFin, setPlantillaAlmuerzoFin] = useState("14:00")
 
   const rangoPlantillaValido =
     esHoraValida(plantillaInicio) &&
     esHoraValida(plantillaFin) &&
     plantillaFin > plantillaInicio
+
+  // Si la plantilla incluye almuerzo, debe ser un rango válido DENTRO de la jornada.
+  const almuerzoPlantillaValido =
+    !plantillaAlmuerza ||
+    (esHoraValida(plantillaAlmuerzoInicio) &&
+      esHoraValida(plantillaAlmuerzoFin) &&
+      plantillaAlmuerzoFin > plantillaAlmuerzoInicio &&
+      plantillaAlmuerzoInicio >= plantillaInicio &&
+      plantillaAlmuerzoFin <= plantillaFin)
 
   const diasQueTrabaja = bloques.filter((b) => b.trabaja).length
 
@@ -120,14 +132,26 @@ export function FixedScheduleForm() {
   }
 
   function aplicarPlantilla() {
-    if (!rangoPlantillaValido) return
+    if (!rangoPlantillaValido || !almuerzoPlantillaValido) return
     setError(null)
     setBloques((prev) =>
-      prev.map((b) =>
-        b.trabaja
-          ? { ...b, horaInicio: plantillaInicio, horaFin: plantillaFin }
-          : b
-      )
+      prev.map((b) => {
+        if (!b.trabaja) return b
+        const base = {
+          ...b,
+          horaInicio: plantillaInicio,
+          horaFin: plantillaFin,
+          almuerzaEnCasa: plantillaAlmuerza,
+        }
+        // El rango de almuerzo solo se copia si la plantilla lo incluye.
+        return plantillaAlmuerza
+          ? {
+              ...base,
+              horaAlmuerzoInicio: plantillaAlmuerzoInicio,
+              horaAlmuerzoFin: plantillaAlmuerzoFin,
+            }
+          : base
+      })
     )
   }
 
@@ -228,11 +252,46 @@ export function FixedScheduleForm() {
               onChange={setPlantillaFin}
             />
           </div>
+
+          {/* Almuerzo común, opcional: se aplica junto con el horario. */}
+          <div className="flex flex-col gap-3 rounded-lg bg-background/60 p-3">
+            <label className="flex items-center gap-2.5">
+              <Switch
+                checked={plantillaAlmuerza}
+                disabled={pending}
+                onChange={() => setPlantillaAlmuerza((v) => !v)}
+                label="Voy a casa a almorzar todos los días"
+              />
+              <span className="text-sm text-foreground">Voy a casa a almorzar</span>
+            </label>
+            {plantillaAlmuerza && (
+              <div className="grid grid-cols-2 gap-3">
+                <TimeField
+                  label="Desde"
+                  value={plantillaAlmuerzoInicio}
+                  disabled={pending}
+                  onChange={setPlantillaAlmuerzoInicio}
+                />
+                <TimeField
+                  label="Hasta"
+                  value={plantillaAlmuerzoFin}
+                  disabled={pending}
+                  onChange={setPlantillaAlmuerzoFin}
+                />
+              </div>
+            )}
+          </div>
+
           <Button
             type="button"
             variant="outline"
             size="sm"
-            disabled={pending || !rangoPlantillaValido || diasQueTrabaja === 0}
+            disabled={
+              pending ||
+              !rangoPlantillaValido ||
+              !almuerzoPlantillaValido ||
+              diasQueTrabaja === 0
+            }
             onClick={aplicarPlantilla}
           >
             Aplicar a los días que trabajo
