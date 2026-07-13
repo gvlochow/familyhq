@@ -5,7 +5,7 @@ import {
   PlaneIcon,
 } from "lucide-react"
 
-import type { EstadoDisponibilidad } from "@/lib/availability/panel"
+import type { EstadoDisponibilidad } from "@/lib/availability/estado"
 
 /**
  * Fuente única del tratamiento visual de cada estado de disponibilidad. La usan

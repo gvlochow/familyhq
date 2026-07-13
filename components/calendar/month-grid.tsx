@@ -1,5 +1,5 @@
 import type { GrillaMes } from "@/lib/availability/mes"
-import type { EstadoDisponibilidad } from "@/lib/availability/panel"
+import type { EstadoDisponibilidad } from "@/lib/availability/estado"
 import { LETRAS_DIA } from "@/lib/availability/dias"
 import { ESTADO_META } from "@/components/availability/estado-meta"
 import { cn } from "@/lib/utils"
