@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils"
 /**
  * Calendario mensual del hogar. Server Component: el mes y el integrante
  * seleccionado viven en la URL (?mes=yyyy-MM & ?member=id), así la navegación es
- * con Links y sin estado de cliente. Lee availability_days (acotado por RLS).
+ * con Links y sin estado de cliente. Lee los tramos intra-día
+ * (availability_segments) acotados por RLS y resume cada día en la grilla.
  */
 export default async function CalendarioPage({
   searchParams,

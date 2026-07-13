@@ -9,12 +9,7 @@ import {
   limitesVentanaUtc,
   type Segmento,
 } from "@/lib/roster/segments"
-import {
-  aplicarOverrides,
-  construirFilasDisponibilidad,
-  ventanaPorDefecto,
-  type OverrideDia,
-} from "@/lib/roster/ingest"
+import { ventanaPorDefecto } from "@/lib/roster/ingest"
 import {
   construirSegmentosFijo,
   type FilaHorarioFijo,
@@ -34,22 +29,18 @@ import {
  *     1. Descifra la URL y hace UN fetch del feed (con timeout).
  *     2. loadRosterEvents descarta en memoria todo evento sin firma iFlight
  *        (privacidad, Ley 19.628): jamás se persiste ni se loguea el contenido.
- *     3. Clasifica la ventana. Escribe DOS materializaciones:
- *        - availability_days (modelo por-día, con overrides) — la UI actual la lee.
- *        - availability_segments (tramos intra-día) — el nuevo modelo. La UI migra
- *          en una fase posterior; hoy se pobla para dejar el cron completo.
+ *     3. Clasifica la ventana a tramos intra-día y escribe availability_segments.
  *     Se recalcula SIEMPRE (no se salta por hash de feed): la ventana es relativa
- *     a hoy y avanza cada mes, y la precedencia de override debe reaplicarse en
- *     cada corrida. La clasificación es en memoria y barata.
+ *     a hoy y avanza cada mes. La clasificación es en memoria y barata.
  *
  *  B) FIJO (fixed_schedules de members con tipo_horario='fijo'). Expande el
  *     horario semanal a tramos (jornada FUERA, mañana/tarde/almuerzo EN_CASA) y
- *     escribe availability_segments. El fijo NO usa availability_days.
+ *     escribe availability_segments.
  *
  * Los tramos se persisten borrando la ventana del integrante y reinsertando (el
  * upsert no sirve: la clave inicio_utc cambia entre corridas). Nota de override:
- * los tramos se escriben como 'clasificado'; aplicar overrides sobre tramos se
- * resuelve junto con la UI de corrección (fase posterior).
+ * los tramos se escriben como 'clasificado'; aplicar correcciones manuales sobre
+ * tramos se resolverá junto con la UI de corrección (feature futura).
  *
  * Un integrante que falla no tumba al resto: cada uno va en su propio try/catch.
  */
@@ -169,42 +160,7 @@ async function procesarConexion(
   const events = loadRosterEvents(ics)
   const buffer = conexion.members?.buffer_llegada_min
 
-  // 4a. Modelo por-día (con overrides) -> availability_days.
-  const filasClasificadas = construirFilasDisponibilidad(events, desde, hasta, buffer)
-
-  const { data: overridesRaw } = await supabase
-    .from("availability_overrides")
-    .select("date, estado, source_event_hash_at_override")
-    .eq("member_id", conexion.member_id)
-    .gte("date", desde)
-    .lte("date", hasta)
-
-  const overrides: OverrideDia[] = (overridesRaw ?? []).map((o) => ({
-    fecha: o.date,
-    estado: o.estado,
-    sourceEventHashAtOverride: o.source_event_hash_at_override,
-  }))
-
-  const filas = aplicarOverrides(filasClasificadas, overrides)
-
-  const { error: upsertError } = await supabase.from("availability_days").upsert(
-    filas.map((f) => ({
-      member_id: conexion.member_id,
-      date: f.fecha,
-      estado: f.estado,
-      source: f.source,
-      source_event_hash: f.sourceEventHash,
-      updated_at: nowISO,
-    })),
-    { onConflict: "member_id,date" },
-  )
-
-  if (upsertError) {
-    console.error(`[cron/roster] conexion ${conexion.id}: upsert días falló:`, upsertError.message)
-    return { estado: "error" }
-  }
-
-  // 4b. Modelo de tramos intra-día -> availability_segments.
+  // 4. Clasificar la ventana a tramos y materializar en availability_segments.
   const segmentos = construirSegmentos(events, desde, hasta, buffer)
   const okSegs = await escribirSegmentos(supabase, conexion.member_id, segmentos, ventana, nowISO)
   if (!okSegs) return { estado: "error" }
@@ -214,7 +170,7 @@ async function procesarConexion(
     .update({ last_fetch_hash: feedHash, last_synced_at: nowISO })
     .eq("id", conexion.id)
 
-  return { estado: "actualizada", dias: filas.length }
+  return { estado: "actualizada", dias: segmentos.length }
 }
 
 // =============================================================================

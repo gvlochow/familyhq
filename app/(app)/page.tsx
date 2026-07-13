@@ -10,8 +10,9 @@ const DIAS = 7
 
 /**
  * Home real: el panel de disponibilidad de la semana (DESIGN.md). Server
- * Component — lee members y availability_days del hogar (acotado por RLS) y arma
- * el modelo de vista con la lógica pura de lib/availability. Sin estado de cliente.
+ * Component — lee members y los tramos intra-día (availability_segments) del hogar
+ * (acotado por RLS) y arma el modelo de vista con la lógica pura de lib/availability.
+ * Sin estado de cliente.
  *
  * La guarda de acceso vive en el layout de (app); acá asumimos sesión + hogar.
  */
