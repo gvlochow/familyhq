@@ -28,27 +28,31 @@ export default async function HomePage() {
 
   const integrantes = members ?? []
   const hoy = DateTime.now().setZone(TZ_LOCAL)
-  const hoyISO = hoy.toISODate()!
-  const hastaISO = hoy.plus({ days: DIAS - 1 }).toISODate()!
+  const nowISO = hoy.toISO()!
+  const inicioVentana = hoy.startOf("day")
+  const winInicioUtc = inicioVentana.toUTC().toISO()!
+  const winFinUtc = inicioVentana.plus({ days: DIAS }).toUTC().toISO()!
 
-  // Un solo query para la disponibilidad de todos los integrantes de la ventana.
-  const { data: dias } = integrantes.length
+  // Un solo query: los tramos de todos los integrantes que solapan la ventana
+  // [hoy, +7 días]. Un tramo solapa si empieza antes del fin y termina después
+  // del inicio de la ventana.
+  const { data: tramosRaw } = integrantes.length
     ? await supabase
-        .from("availability_days")
-        .select("member_id, date, estado")
+        .from("availability_segments")
+        .select("member_id, inicio_utc, fin_utc, estado")
         .in(
           "member_id",
           integrantes.map((m) => m.id),
         )
-        .gte("date", hoyISO)
-        .lte("date", hastaISO)
+        .lt("inicio_utc", winFinUtc)
+        .gt("fin_utc", winInicioUtc)
     : { data: [] }
 
-  const porMiembro = new Map<string, { fecha: string; estado: string }[]>()
-  for (const d of dias ?? []) {
-    const arr = porMiembro.get(d.member_id) ?? []
-    arr.push({ fecha: d.date, estado: d.estado })
-    porMiembro.set(d.member_id, arr)
+  const porMiembro = new Map<string, { inicioUtc: string; finUtc: string; estado: string }[]>()
+  for (const t of tramosRaw ?? []) {
+    const arr = porMiembro.get(t.member_id) ?? []
+    arr.push({ inicioUtc: t.inicio_utc, finUtc: t.fin_utc, estado: t.estado })
+    porMiembro.set(t.member_id, arr)
   }
 
   // El usuario logueado primero; el resto por nombre.
@@ -95,7 +99,8 @@ export default async function HomePage() {
             nombre={m.display_name}
             esTu={m.user_id === user?.id}
             tipoHorario={m.tipo_horario}
-            panel={construirPanelSemana(porMiembro.get(m.id) ?? [], hoyISO, DIAS)}
+            nowISO={nowISO}
+            panel={construirPanelSemana(porMiembro.get(m.id) ?? [], nowISO, DIAS)}
           />
         ))}
       </section>

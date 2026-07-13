@@ -8,31 +8,45 @@ import { ESTADO_META } from "@/components/availability/estado-meta"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-function diaNombre(fecha: string): string {
-  const n = DateTime.fromISO(fecha, { zone: TZ_LOCAL }).setLocale("es").toFormat("cccc")
-  return n.charAt(0).toUpperCase() + n.slice(1)
+/**
+ * "Hasta cuándo" del tramo actual, en hora local. Mismo día -> "las 18:00";
+ * mañana -> "mañana 09:00"; más adelante en la semana -> "el sáb 15:00".
+ */
+function hasta(finISO: string, nowISO: string): string {
+  const fin = DateTime.fromISO(finISO).setZone(TZ_LOCAL)
+  const now = DateTime.fromISO(nowISO).setZone(TZ_LOCAL)
+  const hora = fin.toFormat("HH:mm")
+  if (fin.hasSame(now, "day")) return `las ${hora}`
+  if (fin.hasSame(now.plus({ days: 1 }), "day")) return `mañana ${hora}`
+  const dia = fin.setLocale("es").toFormat("ccc").replace(".", "")
+  return `el ${dia} ${hora}`
 }
 
-/** Subtítulo del estado de hoy: "hasta cuándo" donde aporta información. */
-function subtitulo(estado: EstadoDisponibilidad, cambiaEl: string | null): string {
+/** Subtítulo del estado actual: "hasta cuándo" donde aporta información. */
+function subtitulo(
+  estado: EstadoDisponibilidad,
+  finActualISO: string | null,
+  nowISO: string,
+): string {
+  const cuando = finActualISO ? hasta(finActualISO, nowISO) : null
   switch (estado) {
     case "fuera":
-      return cambiaEl ? `Hasta el ${diaNombre(cambiaEl).toLowerCase()}` : "Toda la semana"
+      return cuando ? `Hasta ${cuando}` : "Toda la semana"
     case "standby_casa":
-      return "En casa, pero llamable"
+      return cuando ? `Llamable hasta ${cuando}` : "En casa, pero llamable"
     case "por_confirmar":
       return "Aún sin definir en el rol"
     case "en_casa":
-      return cambiaEl ? `Hasta el ${diaNombre(cambiaEl).toLowerCase()}` : "Sin viajes esta semana"
+      return cuando ? `Hasta ${cuando}` : "Sin viajes esta semana"
   }
 }
 
-/** Mensaje cuando no hay estado para hoy (rol sin conectar/sincronizar, o fijo). */
+/** Mensaje cuando no hay estado ahora (rol sin conectar/sincronizar, o fijo sin configurar). */
 function mensajePendiente(tipoHorario: string): string {
   if (tipoHorario === "variable")
     return "Conecta o sincroniza tu rol para ver tu disponibilidad."
   if (tipoHorario === "fijo")
-    return "La disponibilidad del horario fijo llegará pronto."
+    return "Configura tu horario fijo para ver tu disponibilidad."
   return "Sin información de disponibilidad todavía."
 }
 
@@ -41,13 +55,15 @@ export function AvailabilityCard({
   esTu,
   tipoHorario,
   panel,
+  nowISO,
 }: {
   nombre: string
   esTu: boolean
   tipoHorario: string
   panel: PanelSemana
+  nowISO: string
 }) {
-  const meta = panel.estadoHoy ? ESTADO_META[panel.estadoHoy] : null
+  const meta = panel.estadoAhora ? ESTADO_META[panel.estadoAhora] : null
 
   return (
     <Card>
@@ -82,7 +98,7 @@ export function AvailabilityCard({
                 {meta.label}
               </span>
               <span className="text-sm opacity-80">
-                {subtitulo(panel.estadoHoy!, panel.cambiaEl)}
+                {subtitulo(panel.estadoAhora!, panel.finActualISO, nowISO)}
               </span>
             </span>
           </div>
