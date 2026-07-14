@@ -4,6 +4,8 @@
  * de verdad del dominio (CLAUDE.md: enums tipados, no strings sueltos).
  */
 
+import type { Recurrencia } from './recurrencia'
+
 /** 'tarea' se completa; 'evento' ocurre a una hora. */
 export type TipoAgenda = 'tarea' | 'evento'
 
@@ -45,6 +47,10 @@ export interface AgendaItem {
   recurrenteId?: string
   /** Resumen legible de la recurrencia ("cada 5 del mes") — solo si recurrente. */
   recurrenciaResumen?: string
+  /** Regla cruda de recurrencia — solo si recurrente (para prellenar la edición). */
+  recurrencia?: Recurrencia
+  /** fecha_fin de la regla (yyyy-mm-dd o null) — solo si recurrente. */
+  recurrenteFechaFin?: string | null
 }
 
 /** Fila cruda de agenda_items (subconjunto que leen las pantallas). */

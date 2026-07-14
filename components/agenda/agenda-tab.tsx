@@ -46,6 +46,7 @@ export function AgendaTab({
 }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
+  const [editando, setEditando] = useState<AgendaItem | null>(null)
   const [pendiente, startTransition] = useTransition()
 
   const pendientes = items.filter((i) => !(i.tipo === "tarea" && i.completado))
@@ -95,7 +96,7 @@ export function AgendaTab({
       ) : (
         <ul className={cn("flex flex-col", pendiente && "opacity-60")}>
           {pendientes.map((item, i) => (
-            <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onBorrar={borrar} />
+            <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
           ))}
         </ul>
       )}
@@ -107,10 +108,19 @@ export function AgendaTab({
           </h2>
           <ul className={cn("flex flex-col", pendiente && "opacity-60")}>
             {hechas.map((item, i) => (
-              <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onBorrar={borrar} />
+              <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
             ))}
           </ul>
         </div>
+      )}
+
+      {editando && (
+        <AgendaSheet
+          miembros={miembros}
+          agregadoPor={agregadoPor}
+          editar={editando}
+          onClose={() => setEditando(null)}
+        />
       )}
 
       {abierto && (
@@ -129,12 +139,14 @@ function Fila({
   nowISO,
   borde,
   onToggle,
+  onEditar,
   onBorrar,
 }: {
   item: AgendaItem
   nowISO: string
   borde: boolean
   onToggle: (i: AgendaItem) => void
+  onEditar: (i: AgendaItem) => void
   onBorrar: (i: AgendaItem) => void
 }) {
   const esTarea = item.tipo === "tarea"
@@ -158,7 +170,12 @@ function Fila({
         </span>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={() => onEditar(item)}
+        aria-label={`Editar ${item.titulo}`}
+        className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+      >
         <span className={cn("flex items-center gap-1.5 text-sm font-medium text-foreground", item.completado && "text-muted-foreground line-through")}>
           {item.recurrente && <RepeatIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label="Se repite" />}
           <span className="truncate">{item.titulo}</span>
@@ -170,7 +187,7 @@ function Fila({
           )}
           {item.agregadoPor && <span className="text-muted-foreground/70"> · por {item.agregadoPor}</span>}
         </span>
-      </div>
+      </button>
 
       <AsignadosChips asignados={item.asignados} />
 

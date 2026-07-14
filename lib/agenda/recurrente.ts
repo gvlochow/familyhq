@@ -67,6 +67,8 @@ export function expandirRecurrentes(
         recurrente: true,
         recurrenteId: regla.id,
         recurrenciaResumen: resumen,
+        recurrencia: regla.recurrence,
+        recurrenteFechaFin: regla.fecha_fin,
       })
     }
   }
