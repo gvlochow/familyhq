@@ -39,6 +39,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_items: {
+        Row: {
+          completado: boolean
+          completado_at: string | null
+          created_at: string
+          created_by: string | null
+          fecha: string
+          hora: string | null
+          household_id: string
+          id: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          completado?: boolean
+          completado_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          fecha: string
+          hora?: string | null
+          household_id: string
+          id?: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          completado?: boolean
+          completado_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          hora?: string | null
+          household_id?: string
+          id?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_items_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       availability_overrides: {
         Row: {
           created_at: string

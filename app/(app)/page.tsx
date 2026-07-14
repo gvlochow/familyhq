@@ -7,6 +7,8 @@ import { estadoEnInstante } from "@/lib/availability/dia-resumen"
 import { ORDEN_PRECEDENCIA, type EstadoDisponibilidad } from "@/lib/availability/estado"
 import { construirProximos, type MiembroTramos } from "@/lib/availability/proximo"
 import { tramosConDefault } from "@/lib/availability/miembros"
+import { construirFeed } from "@/lib/agenda/feed"
+import { esTipoAgenda, type AgendaItem } from "@/lib/agenda/tipos"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -91,6 +93,26 @@ export default async function HomePage() {
   }))
   const proximos = construirProximos(miembrosTramos, nowISO, DIAS)
 
+  // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
+  const { data: agendaRaw } = await supabase
+    .from("agenda_items")
+    .select("id, tipo, titulo, fecha, hora, completado")
+    .gte("fecha", inicioVentana.toISODate()!)
+    .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!)
+
+  const agenda: AgendaItem[] = (agendaRaw ?? [])
+    .filter((r) => esTipoAgenda(r.tipo))
+    .map((r) => ({
+      id: r.id,
+      tipo: r.tipo as AgendaItem["tipo"],
+      titulo: r.titulo,
+      fecha: r.fecha,
+      hora: r.hora ? r.hora.slice(0, 5) : null,
+      completado: r.completado,
+    }))
+
+  const filas = construirFeed(proximos, agenda, nowISO, DIAS)
+
   const fecha = capitalizar(hoy.setLocale("es").toFormat("ccc d LLL")).replace(".", "")
 
   return (
@@ -140,8 +162,8 @@ export default async function HomePage() {
           )}
         </section>
 
-        {/* Próximo en la casa (forecast). */}
-        <ProximoList items={proximos} nowISO={nowISO} />
+        {/* Próximo en la casa (forecast): disponibilidad + agenda. */}
+        <ProximoList filas={filas} nowISO={nowISO} />
       </div>
 
       <HomeActions />
