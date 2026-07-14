@@ -109,29 +109,39 @@ export type Database = {
       availability_overrides: {
         Row: {
           created_at: string
-          date: string
+          created_by: string | null
           estado: string
+          fin_utc: string
           id: string
+          inicio_utc: string
           member_id: string
-          source_event_hash_at_override: string | null
         }
         Insert: {
           created_at?: string
-          date: string
+          created_by?: string | null
           estado: string
+          fin_utc: string
           id?: string
+          inicio_utc: string
           member_id: string
-          source_event_hash_at_override?: string | null
         }
         Update: {
           created_at?: string
-          date?: string
+          created_by?: string | null
           estado?: string
+          fin_utc?: string
           id?: string
+          inicio_utc?: string
           member_id?: string
-          source_event_hash_at_override?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "availability_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "availability_overrides_member_id_fkey"
             columns: ["member_id"]
