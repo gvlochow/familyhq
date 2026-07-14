@@ -6,9 +6,9 @@ import { TZ_LOCAL } from "@/lib/roster/types"
 import { estadoEnInstante } from "@/lib/availability/dia-resumen"
 import { ORDEN_PRECEDENCIA, type EstadoDisponibilidad } from "@/lib/availability/estado"
 import { construirProximos, type MiembroTramos } from "@/lib/availability/proximo"
-import { tramosConDefault } from "@/lib/availability/miembros"
 import { construirFeed } from "@/lib/agenda/feed"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
+import { cargarTramosEfectivos } from "./_lib/tramos-efectivos"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -42,29 +42,15 @@ export default async function HomePage() {
   const winInicioUtc = inicioVentana.toUTC().toISO()!
   const winFinUtc = inicioVentana.plus({ days: DIAS }).toUTC().toISO()!
 
-  // Un solo query: los tramos de todos los integrantes que solapan la ventana.
-  const { data: tramosRaw } = integrantes.length
-    ? await supabase
-        .from("availability_segments")
-        .select("member_id, inicio_utc, fin_utc, estado")
-        .in(
-          "member_id",
-          integrantes.map((m) => m.id),
-        )
-        .lt("inicio_utc", winFinUtc)
-        .gt("fin_utc", winInicioUtc)
-    : { data: [] }
-
-  const porMiembro = new Map<string, { inicioUtc: string; finUtc: string; estado: string }[]>()
-  for (const t of tramosRaw ?? []) {
-    const arr = porMiembro.get(t.member_id) ?? []
-    arr.push({ inicioUtc: t.inicio_utc, finUtc: t.fin_utc, estado: t.estado })
-    porMiembro.set(t.member_id, arr)
-  }
-
-  // Tramos del integrante con el default "en casa" para quien no tiene horario.
-  const tramosDe = (m: (typeof integrantes)[number]) =>
-    tramosConDefault(m.tipo_horario, porMiembro.get(m.id) ?? [], winInicioUtc, winFinUtc)
+  // Tramos EFECTIVOS por integrante: clasificado/fijo + default + overrides
+  // manuales, compuestos por el loader compartido (acotado por RLS al hogar).
+  const tramosPorMiembro = await cargarTramosEfectivos(
+    supabase,
+    integrantes,
+    winInicioUtc,
+    winFinUtc,
+  )
+  const tramosDe = (m: (typeof integrantes)[number]) => tramosPorMiembro.get(m.id) ?? []
 
   // Estado ACTUAL de cada integrante + orden "excepciones primero" (quién no está
   // en casa se ve arriba); el resto por nombre.
