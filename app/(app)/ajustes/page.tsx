@@ -72,7 +72,7 @@ export default async function AjustesPage() {
           tipo={yo.tipo_horario}
           variableConectado={!!conexion}
           ultimaSync={conexion?.last_synced_at ?? null}
-          bloquesFijo={bloquesDesdeFilas(filasFijo ?? [])}
+          bloquesFijo={filasFijo && filasFijo.length > 0 ? bloquesDesdeFilas(filasFijo) : undefined}
         />
       )}
 

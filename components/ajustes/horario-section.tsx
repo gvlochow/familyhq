@@ -34,7 +34,8 @@ export function HorarioSection({
   tipo: string
   variableConectado: boolean
   ultimaSync: string | null
-  bloquesFijo: BloqueDia[]
+  /** Bloques guardados; undefined = sin configurar aún (el editor parte del preset L-V). */
+  bloquesFijo?: BloqueDia[]
 }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
