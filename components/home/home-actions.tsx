@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { PlusIcon, UserRoundIcon } from "lucide-react"
 
+import type { MiembroRef } from "@/lib/agenda/tipos"
 import { AgendaSheet } from "@/components/agenda/agenda-sheet"
 
 /**
@@ -13,7 +14,13 @@ import { AgendaSheet } from "@/components/agenda/agenda-sheet"
  * como SHELL (el override manual sobre tramos aún no existe): muestra un aviso
  * "pronto" en vez de fingir una acción.
  */
-export function HomeActions() {
+export function HomeActions({
+  miembros,
+  agregadoPor,
+}: {
+  miembros: MiembroRef[]
+  agregadoPor: string | null
+}) {
   const [aviso, setAviso] = useState(false)
   const [agregar, setAgregar] = useState(false)
 
@@ -47,7 +54,13 @@ export function HomeActions() {
         </div>
       </div>
 
-      {agregar && <AgendaSheet onClose={() => setAgregar(false)} />}
+      {agregar && (
+        <AgendaSheet
+          miembros={miembros}
+          agregadoPor={agregadoPor}
+          onClose={() => setAgregar(false)}
+        />
+      )}
     </>
   )
 }

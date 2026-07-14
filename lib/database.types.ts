@@ -41,8 +41,10 @@ export type Database = {
     Tables: {
       agenda_items: {
         Row: {
+          asignado_a: string[]
           completado: boolean
           completado_at: string | null
+          completado_por: string | null
           created_at: string
           created_by: string | null
           fecha: string
@@ -53,8 +55,10 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          asignado_a?: string[]
           completado?: boolean
           completado_at?: string | null
+          completado_por?: string | null
           created_at?: string
           created_by?: string | null
           fecha: string
@@ -65,8 +69,10 @@ export type Database = {
           titulo: string
         }
         Update: {
+          asignado_a?: string[]
           completado?: boolean
           completado_at?: string | null
+          completado_por?: string | null
           created_at?: string
           created_by?: string | null
           fecha?: string
@@ -77,6 +83,13 @@ export type Database = {
           titulo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agenda_items_completado_por_fkey"
+            columns: ["completado_por"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agenda_items_created_by_fkey"
             columns: ["created_by"]

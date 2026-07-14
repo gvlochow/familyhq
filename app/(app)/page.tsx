@@ -8,7 +8,7 @@ import { ORDEN_PRECEDENCIA, type EstadoDisponibilidad } from "@/lib/availability
 import { construirProximos, type MiembroTramos } from "@/lib/availability/proximo"
 import { tramosConDefault } from "@/lib/availability/miembros"
 import { construirFeed } from "@/lib/agenda/feed"
-import { esTipoAgenda, type AgendaItem } from "@/lib/agenda/tipos"
+import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -93,23 +93,26 @@ export default async function HomePage() {
   }))
   const proximos = construirProximos(miembrosTramos, nowISO, DIAS)
 
+  // Mapa de integrantes para resolver asignados y "agregado por".
+  const miembrosRef: MiembroRef[] = integrantes.map((m) => ({
+    id: m.id,
+    inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
+    nombre: m.display_name.split(" ")[0],
+  }))
+  const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
+  const yo = integrantes.find((m) => m.user_id === user?.id)
+  const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
+
   // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
   const { data: agendaRaw } = await supabase
     .from("agenda_items")
-    .select("id, tipo, titulo, fecha, hora, completado")
+    .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
     .gte("fecha", inicioVentana.toISODate()!)
     .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!)
 
   const agenda: AgendaItem[] = (agendaRaw ?? [])
-    .filter((r) => esTipoAgenda(r.tipo))
-    .map((r) => ({
-      id: r.id,
-      tipo: r.tipo as AgendaItem["tipo"],
-      titulo: r.titulo,
-      fecha: r.fecha,
-      hora: r.hora ? r.hora.slice(0, 5) : null,
-      completado: r.completado,
-    }))
+    .map((r) => mapearAgendaItem(r, miembrosById))
+    .filter((it): it is AgendaItem => it !== null)
 
   const filas = construirFeed(proximos, agenda, nowISO, DIAS)
 
@@ -166,7 +169,7 @@ export default async function HomePage() {
         <ProximoList filas={filas} nowISO={nowISO} />
       </div>
 
-      <HomeActions />
+      <HomeActions miembros={miembrosRef} agregadoPor={agregadoPor} />
     </main>
   )
 }

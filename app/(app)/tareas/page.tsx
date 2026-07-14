@@ -2,35 +2,43 @@ import { DateTime } from "luxon"
 
 import { createClient } from "@/lib/supabase/server"
 import { TZ_LOCAL } from "@/lib/roster/types"
-import { esTipoAgenda, type AgendaItem } from "@/lib/agenda/tipos"
+import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
 
 /**
  * Tab Tareas: las tareas y eventos puntuales del hogar (agenda_items). Server
- * Component — lee la agenda (acotada por RLS) y delega la interacción (crear,
- * completar, eliminar) al componente cliente. Las horas se guardan en formato
- * local "HH:MM"; la recurrencia y la lista de compras llegarán después.
+ * Component — lee la agenda + integrantes (acotado por RLS), resuelve asignados y
+ * "agregado por", y delega la interacción (crear, completar, eliminar) al cliente.
  */
 export default async function TareasPage() {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const { data } = await supabase
-    .from("agenda_items")
-    .select("id, tipo, titulo, fecha, hora, completado")
-    .order("fecha", { ascending: true })
-    .order("hora", { ascending: true, nullsFirst: true })
+  const [{ data: members }, { data: agendaRaw }] = await Promise.all([
+    supabase.from("members").select("id, display_name, user_id"),
+    supabase
+      .from("agenda_items")
+      .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
+      .order("fecha", { ascending: true })
+      .order("hora", { ascending: true, nullsFirst: true }),
+  ])
 
-  const items: AgendaItem[] = (data ?? [])
-    .filter((r) => esTipoAgenda(r.tipo))
-    .map((r) => ({
-      id: r.id,
-      tipo: r.tipo as AgendaItem["tipo"],
-      titulo: r.titulo,
-      fecha: r.fecha,
-      hora: r.hora ? r.hora.slice(0, 5) : null, // "HH:MM:SS" -> "HH:MM"
-      completado: r.completado,
-    }))
+  const integrantes = members ?? []
+  const miembrosRef: MiembroRef[] = integrantes.map((m) => ({
+    id: m.id,
+    inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
+    nombre: m.display_name.split(" ")[0],
+  }))
+  const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
 
+  const items: AgendaItem[] = (agendaRaw ?? [])
+    .map((r) => mapearAgendaItem(r, miembrosById))
+    .filter((it): it is AgendaItem => it !== null)
+
+  const yo = integrantes.find((m) => m.user_id === user?.id)
+  const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
   const nowISO = DateTime.now().setZone(TZ_LOCAL).toISO()!
 
   return (
@@ -40,7 +48,7 @@ export default async function TareasPage() {
         <p className="text-sm text-muted-foreground">Lo que hay que hacer y lo que viene.</p>
       </div>
 
-      <AgendaTab items={items} nowISO={nowISO} />
+      <AgendaTab items={items} nowISO={nowISO} miembros={miembrosRef} agregadoPor={agregadoPor} />
     </main>
   )
 }

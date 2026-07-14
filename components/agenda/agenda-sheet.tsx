@@ -6,7 +6,7 @@ import { DateTime } from "luxon"
 import { XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
-import { TIPOS_AGENDA, type TipoAgenda } from "@/lib/agenda/tipos"
+import { TIPOS_AGENDA, type MiembroRef, type TipoAgenda } from "@/lib/agenda/tipos"
 import { crearAgendaItem } from "@/app/(app)/tareas/actions"
 import { cn } from "@/lib/utils"
 
@@ -19,14 +19,27 @@ const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" 
  * Tareas y el "+" del Inicio. Al guardar hace router.refresh para que la vista
  * server (feed / lista) se actualice.
  */
-export function AgendaSheet({ onClose }: { onClose: () => void }) {
+export function AgendaSheet({
+  miembros,
+  agregadoPor,
+  onClose,
+}: {
+  miembros: MiembroRef[]
+  agregadoPor: string | null
+  onClose: () => void
+}) {
   const router = useRouter()
   const [tipo, setTipo] = useState<TipoAgenda>("tarea")
   const [titulo, setTitulo] = useState("")
   const [fecha, setFecha] = useState(() => DateTime.now().setZone(TZ_LOCAL).toISODate()!)
-  const [hora, setHora] = useState("")
+  const [todoElDia, setTodoElDia] = useState(true)
+  const [hora, setHora] = useState("09:00")
+  const [asignados, setAsignados] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+
+  const toggleAsignado = (id: string) =>
+    setAsignados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -38,7 +51,13 @@ export function AgendaSheet({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setGuardando(true)
     setError(null)
-    const res = await crearAgendaItem({ tipo, titulo, fecha, hora: hora || null })
+    const res = await crearAgendaItem({
+      tipo,
+      titulo,
+      fecha,
+      hora: todoElDia ? null : hora,
+      asignadoA: asignados,
+    })
     setGuardando(false)
     if (res.error) {
       setError(res.error)
@@ -107,20 +126,70 @@ export function AgendaSheet({ onClose }: { onClose: () => void }) {
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </label>
-          <label className="flex flex-1 flex-col gap-1">
-            <span className="text-sm font-medium text-foreground">
-              Hora <span className="text-muted-foreground">(opcional)</span>
-            </span>
-            <input
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </label>
+          {!todoElDia && (
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-sm font-medium text-foreground">Hora</span>
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
+          )}
         </div>
 
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={todoElDia}
+            onChange={(e) => setTodoElDia(e.target.checked)}
+            className="size-4 rounded border-border accent-primary"
+          />
+          Todo el día
+        </label>
+
+        {/* Asignar a integrantes (opcional). */}
+        {miembros.length > 0 && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-foreground">Asignar a</legend>
+            <div className="flex flex-wrap gap-2">
+              {miembros.map((m) => {
+                const activo = asignados.includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => toggleAsignado(m.id)}
+                    aria-pressed={activo}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors",
+                      activo
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-5 items-center justify-center rounded-full text-[10px] font-semibold",
+                        activo ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                      )}
+                    >
+                      {m.inicial}
+                    </span>
+                    {m.nombre}
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
+        )}
+
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {agregadoPor && (
+          <p className="text-xs text-muted-foreground">Lo agregas tú ({agregadoPor}).</p>
+        )}
 
         <button
           type="submit"

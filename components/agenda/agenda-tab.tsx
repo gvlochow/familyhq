@@ -12,9 +12,10 @@ import {
 } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
-import type { AgendaItem } from "@/lib/agenda/tipos"
+import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
 import { etiquetaCuando } from "@/lib/availability/formato"
 import { marcarCompletado, eliminarAgendaItem } from "@/app/(app)/tareas/actions"
+import { AsignadosChips } from "./asignados-chips"
 import { AgendaSheet } from "./agenda-sheet"
 import { cn } from "@/lib/utils"
 
@@ -26,7 +27,17 @@ function cuandoISO(item: AgendaItem): string {
   return base.set({ hour: h, minute: m }).toISO()!
 }
 
-export function AgendaTab({ items, nowISO }: { items: AgendaItem[]; nowISO: string }) {
+export function AgendaTab({
+  items,
+  nowISO,
+  miembros,
+  agregadoPor,
+}: {
+  items: AgendaItem[]
+  nowISO: string
+  miembros: MiembroRef[]
+  agregadoPor: string | null
+}) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
   const [pendiente, startTransition] = useTransition()
@@ -83,7 +94,13 @@ export function AgendaTab({ items, nowISO }: { items: AgendaItem[]; nowISO: stri
         </div>
       )}
 
-      {abierto && <AgendaSheet onClose={() => setAbierto(false)} />}
+      {abierto && (
+        <AgendaSheet
+          miembros={miembros}
+          agregadoPor={agregadoPor}
+          onClose={() => setAbierto(false)}
+        />
+      )}
     </>
   )
 }
@@ -122,12 +139,17 @@ function Fila({
         </span>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={cn("truncate text-sm font-medium text-foreground", item.completado && "text-muted-foreground line-through")}>
           {item.titulo}
         </span>
-        <span className="text-xs text-muted-foreground">{cuando}</span>
+        <span className="truncate text-xs text-muted-foreground">
+          {cuando}
+          {item.agregadoPor && <span className="text-muted-foreground/70"> · por {item.agregadoPor}</span>}
+        </span>
       </div>
+
+      <AsignadosChips asignados={item.asignados} />
 
       <button
         type="button"
