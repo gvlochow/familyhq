@@ -60,6 +60,39 @@ export const BLOQUES_POR_DEFECTO: readonly BloqueDia[] = DIAS_SEMANA.map(
   })
 )
 
+/** Fila de fixed_schedules tal como llega de la base. */
+export interface FilaFixedSchedule {
+  dia_semana: number
+  hora_inicio: string | null
+  hora_fin: string | null
+  almuerza_en_casa: boolean
+  hora_almuerzo_inicio: string | null
+  hora_almuerzo_fin: string | null
+}
+
+/**
+ * Reconstruye los 7 bloques desde las filas guardadas de fixed_schedules (para
+ * prellenar el editor en Ajustes). Un día sin fila (o sin horas) queda LIBRE con los
+ * valores por defecto en los campos. Las horas "HH:MM:SS" se recortan a "HH:MM".
+ */
+export function bloquesDesdeFilas(filas: FilaFixedSchedule[]): BloqueDia[] {
+  const porDia = new Map(filas.map((f) => [f.dia_semana, f]))
+  const hhmm = (v: string | null, fallback: string) => (v ? v.slice(0, 5) : fallback)
+  return DIAS_SEMANA.map(({ dia }) => {
+    const f = porDia.get(dia)
+    const trabaja = !!(f && f.hora_inicio && f.hora_fin)
+    return {
+      dia,
+      trabaja,
+      horaInicio: hhmm(f?.hora_inicio ?? null, HORA_INICIO_DEFECTO),
+      horaFin: hhmm(f?.hora_fin ?? null, HORA_FIN_DEFECTO),
+      almuerzaEnCasa: !!f?.almuerza_en_casa,
+      horaAlmuerzoInicio: hhmm(f?.hora_almuerzo_inicio ?? null, ALMUERZO_INICIO_DEFECTO),
+      horaAlmuerzoFin: hhmm(f?.hora_almuerzo_fin ?? null, ALMUERZO_FIN_DEFECTO),
+    }
+  })
+}
+
 /** "HH:MM" válido en 00:00–23:59. */
 export function esHoraValida(valor: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(valor)
