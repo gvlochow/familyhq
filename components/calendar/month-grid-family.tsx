@@ -25,9 +25,11 @@ const MAX_CHIPS = 3
 export function MonthGridFamily({
   grilla,
   miembros,
+  onDiaClick,
 }: {
   grilla: GrillaMesFamilia
   miembros: { id: string; inicial: string; nombre: string }[]
+  onDiaClick?: (fecha: string) => void
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -58,10 +60,13 @@ export function MonthGridFamily({
           const resto = fuera.length - visibles.length
 
           return (
-            <div
+            <button
               key={d.fecha}
+              type="button"
+              onClick={() => onDiaClick?.(d.fecha)}
+              aria-label={`Ver el ${d.dia}`}
               className={cn(
-                "flex aspect-square flex-col gap-0.5 rounded-md p-1",
+                "flex aspect-square flex-col gap-0.5 rounded-md p-1 text-left transition-colors hover:bg-muted/60",
                 d.esHoy ? "ring-2 ring-primary/50" : "ring-1 ring-border/60",
               )}
             >
@@ -94,7 +99,7 @@ export function MonthGridFamily({
                   )}
                 </span>
               )}
-            </div>
+            </button>
           )
         })}
       </div>

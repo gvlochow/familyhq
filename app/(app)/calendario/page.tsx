@@ -8,7 +8,7 @@ import {
   construirGrillaMesFamilia,
   type MiembroCalendario,
 } from "@/lib/availability/mes-familia"
-import { MonthGridFamily } from "@/components/calendar/month-grid-family"
+import { CalendarView } from "@/components/calendar/calendar-view"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -104,7 +104,7 @@ export default async function CalendarioPage({
       </header>
 
       {integrantes.length > 0 ? (
-        <MonthGridFamily grilla={grilla} miembros={miembros} />
+        <CalendarView grilla={grilla} miembros={miembros} />
       ) : (
         <p className="text-sm text-muted-foreground">
           Todavía no hay integrantes en el hogar.
