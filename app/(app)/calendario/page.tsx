@@ -9,6 +9,7 @@ import {
   type MiembroCalendario,
 } from "@/lib/availability/mes-familia"
 import { CalendarView } from "@/components/calendar/calendar-view"
+import { tramosConDefault } from "@/lib/availability/miembros"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -26,7 +27,7 @@ export default async function CalendarioPage({
 
   const { data: members } = await supabase
     .from("members")
-    .select("id, display_name, user_id")
+    .select("id, display_name, user_id, tipo_horario")
   const integrantes = members ?? []
 
   // Mes base: ?mes=yyyy-MM válido, o el mes actual.
@@ -61,7 +62,12 @@ export default async function CalendarioPage({
     id: m.id,
     nombre: m.display_name.split(" ")[0],
     inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
-    tramos: porMiembro.get(m.id) ?? [],
+    tramos: tramosConDefault(
+      m.tipo_horario,
+      porMiembro.get(m.id) ?? [],
+      winInicioUtc,
+      winFinUtc,
+    ),
   }))
 
   const grilla = construirGrillaMesFamilia(miembros, base.toFormat("yyyy-MM"), hoy.toISODate()!)

@@ -6,6 +6,7 @@ import { TZ_LOCAL } from "@/lib/roster/types"
 import { estadoEnInstante } from "@/lib/availability/dia-resumen"
 import { ORDEN_PRECEDENCIA, type EstadoDisponibilidad } from "@/lib/availability/estado"
 import { construirProximos, type MiembroTramos } from "@/lib/availability/proximo"
+import { tramosConDefault } from "@/lib/availability/miembros"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -28,7 +29,7 @@ export default async function HomePage() {
   } = await supabase.auth.getUser()
 
   const [{ data: members }, { data: hogar }] = await Promise.all([
-    supabase.from("members").select("id, display_name, user_id"),
+    supabase.from("members").select("id, display_name, user_id, tipo_horario"),
     supabase.from("households").select("name").limit(1).maybeSingle(),
   ])
 
@@ -59,13 +60,17 @@ export default async function HomePage() {
     porMiembro.set(t.member_id, arr)
   }
 
+  // Tramos del integrante con el default "en casa" para quien no tiene horario.
+  const tramosDe = (m: (typeof integrantes)[number]) =>
+    tramosConDefault(m.tipo_horario, porMiembro.get(m.id) ?? [], winInicioUtc, winFinUtc)
+
   // Estado ACTUAL de cada integrante + orden "excepciones primero" (quién no está
   // en casa se ve arriba); el resto por nombre.
   const rank = (e: EstadoDisponibilidad | null) =>
     e ? ORDEN_PRECEDENCIA.indexOf(e) : ORDEN_PRECEDENCIA.length
   const tarjetas = integrantes
     .map((m) => {
-      const ahora = estadoEnInstante(porMiembro.get(m.id) ?? [], nowISO)
+      const ahora = estadoEnInstante(tramosDe(m), nowISO)
       return {
         id: m.id,
         nombre: m.display_name,
@@ -82,7 +87,7 @@ export default async function HomePage() {
   const miembrosTramos: MiembroTramos[] = integrantes.map((m) => ({
     id: m.id,
     nombre: m.display_name.split(" ")[0],
-    tramos: porMiembro.get(m.id) ?? [],
+    tramos: tramosDe(m),
   }))
   const proximos = construirProximos(miembrosTramos, nowISO, DIAS)
 
