@@ -9,6 +9,7 @@ import { construirProximos, type MiembroTramos } from "@/lib/availability/proxim
 import { construirFeed } from "@/lib/agenda/feed"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { cargarTramosEfectivos } from "./_lib/tramos-efectivos"
+import { cargarAgendaRecurrente } from "./_lib/agenda-recurrente"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -107,11 +108,19 @@ export default async function HomePage() {
     .gte("fecha", inicioVentana.toISODate()!)
     .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!)
 
-  const agenda: AgendaItem[] = (agendaRaw ?? [])
+  const puntuales: AgendaItem[] = (agendaRaw ?? [])
     .map((r) => mapearAgendaItem(r, miembrosById))
     .filter((it): it is AgendaItem => it !== null)
 
-  const filas = construirFeed(proximos, agenda, nowISO, DIAS)
+  // Ocurrencias recurrentes de la misma ventana; construirFeed las acota fino.
+  const recurrentes = await cargarAgendaRecurrente(
+    supabase,
+    miembrosById,
+    inicioVentana.toISODate()!,
+    inicioVentana.plus({ days: DIAS }).toISODate()!,
+  )
+
+  const filas = construirFeed(proximos, [...puntuales, ...recurrentes], nowISO, DIAS)
 
   const fecha = capitalizar(hoy.setLocale("es").toFormat("ccc d LLL")).replace(".", "")
 

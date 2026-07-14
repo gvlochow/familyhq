@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { esTipoAgenda } from "@/lib/agenda/tipos"
 
+const RE_ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 /** Resultado uniforme de las acciones: {error} legible o {} si salió bien. */
 type Resultado = { error?: string }
 
@@ -98,6 +100,57 @@ export async function marcarCompletado(id: string, completado: boolean): Promise
 export async function eliminarAgendaItem(id: string): Promise<Resultado> {
   const supabase = await createClient()
   const { error } = await supabase.from("agenda_items").delete().eq("id", id)
+  if (error) return { error: "No se pudo eliminar." }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  return {}
+}
+
+/**
+ * Marca/desmarca una OCURRENCIA de una actividad recurrente. El completado vive por
+ * ocurrencia (recurring_completions): completar = upsert la fila (rule, fecha),
+ * destildar = borrarla. RLS exige que la regla sea del hogar.
+ */
+export async function marcarOcurrenciaRecurrente(
+  ruleId: string,
+  fecha: string,
+  completado: boolean,
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const miembro = await miembroActual(supabase)
+  if (!miembro) return { error: "No hay sesión." }
+  if (!RE_ISO_DATE.test(fecha)) return { error: "Fecha inválida." }
+
+  if (completado) {
+    const { error } = await supabase.from("recurring_completions").upsert(
+      {
+        recurring_activity_id: ruleId,
+        fecha,
+        completado_por: miembro.id,
+        completado_at: new Date().toISOString(),
+      },
+      { onConflict: "recurring_activity_id,fecha" },
+    )
+    if (error) return { error: "No se pudo actualizar." }
+  } else {
+    const { error } = await supabase
+      .from("recurring_completions")
+      .delete()
+      .eq("recurring_activity_id", ruleId)
+      .eq("fecha", fecha)
+    if (error) return { error: "No se pudo actualizar." }
+  }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  return {}
+}
+
+/** Elimina una actividad recurrente completa (sus completaciones caen por cascade). */
+export async function eliminarActividadRecurrente(ruleId: string): Promise<Resultado> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("recurring_activities").delete().eq("id", ruleId)
   if (error) return { error: "No se pudo eliminar." }
 
   revalidatePath("/tareas")

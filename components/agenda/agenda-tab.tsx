@@ -8,13 +8,19 @@ import {
   CircleIcon,
   CircleCheckIcon,
   PlusIcon,
+  RepeatIcon,
   Trash2Icon,
 } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
 import { etiquetaCuando } from "@/lib/availability/formato"
-import { marcarCompletado, eliminarAgendaItem } from "@/app/(app)/tareas/actions"
+import {
+  marcarCompletado,
+  eliminarAgendaItem,
+  marcarOcurrenciaRecurrente,
+  eliminarActividadRecurrente,
+} from "@/app/(app)/tareas/actions"
 import { AsignadosChips } from "./asignados-chips"
 import { AgendaSheet } from "./agenda-sheet"
 import { cn } from "@/lib/utils"
@@ -47,13 +53,26 @@ export function AgendaTab({
 
   function toggle(item: AgendaItem) {
     startTransition(async () => {
-      await marcarCompletado(item.id, !item.completado)
+      if (item.recurrente && item.recurrenteId) {
+        await marcarOcurrenciaRecurrente(item.recurrenteId, item.fecha, !item.completado)
+      } else {
+        await marcarCompletado(item.id, !item.completado)
+      }
       router.refresh()
     })
   }
-  function borrar(id: string) {
+  function borrar(item: AgendaItem) {
+    // Una ocurrencia recurrente no se borra sola: se elimina la regla completa.
+    if (item.recurrente && item.recurrenteId) {
+      if (!confirm(`¿Eliminar la actividad recurrente "${item.titulo}"? Dejará de repetirse.`)) return
+      startTransition(async () => {
+        await eliminarActividadRecurrente(item.recurrenteId!)
+        router.refresh()
+      })
+      return
+    }
     startTransition(async () => {
-      await eliminarAgendaItem(id)
+      await eliminarAgendaItem(item.id)
       router.refresh()
     })
   }
@@ -116,7 +135,7 @@ function Fila({
   nowISO: string
   borde: boolean
   onToggle: (i: AgendaItem) => void
-  onBorrar: (id: string) => void
+  onBorrar: (i: AgendaItem) => void
 }) {
   const esTarea = item.tipo === "tarea"
   const etiqueta = etiquetaCuando(cuandoISO(item), nowISO, item.hora !== null)
@@ -140,11 +159,15 @@ function Fila({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className={cn("truncate text-sm font-medium text-foreground", item.completado && "text-muted-foreground line-through")}>
-          {item.titulo}
+        <span className={cn("flex items-center gap-1.5 text-sm font-medium text-foreground", item.completado && "text-muted-foreground line-through")}>
+          {item.recurrente && <RepeatIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label="Se repite" />}
+          <span className="truncate">{item.titulo}</span>
         </span>
         <span className="truncate text-xs text-muted-foreground">
           {cuando}
+          {item.recurrente && item.recurrenciaResumen && (
+            <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>
+          )}
           {item.agregadoPor && <span className="text-muted-foreground/70"> · por {item.agregadoPor}</span>}
         </span>
       </div>
@@ -153,8 +176,8 @@ function Fila({
 
       <button
         type="button"
-        onClick={() => onBorrar(item.id)}
-        aria-label="Eliminar"
+        onClick={() => onBorrar(item)}
+        aria-label={item.recurrente ? "Eliminar actividad recurrente" : "Eliminar"}
         className="shrink-0 text-muted-foreground/60 transition-colors hover:text-destructive"
       >
         <Trash2Icon className="size-4" />
