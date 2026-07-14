@@ -2,13 +2,15 @@
 
 import { useEffect } from "react"
 import { DateTime } from "luxon"
-import { XIcon } from "lucide-react"
+import { CalendarIcon, CircleIcon, CircleCheckIcon, RepeatIcon, XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { EstadoDisponibilidad } from "@/lib/availability/estado"
 import { detalleDelDia, fraseFuera } from "@/lib/availability/dia-detalle"
 import type { MiembroCalendario } from "@/lib/availability/mes-familia"
+import type { AgendaItem } from "@/lib/agenda/tipos"
 import { ESTADO_META } from "@/components/availability/estado-meta"
+import { AsignadosChips } from "@/components/agenda/asignados-chips"
 import { cn } from "@/lib/utils"
 
 /** Color de relleno de la barra por estado. */
@@ -27,10 +29,12 @@ const BARRA: Record<EstadoDisponibilidad, string> = {
 export function DayDetailSheet({
   fecha,
   miembros,
+  agenda,
   onClose,
 }: {
   fecha: string
   miembros: MiembroCalendario[]
+  agenda: AgendaItem[]
   onClose: () => void
 }) {
   useEffect(() => {
@@ -68,6 +72,9 @@ export function DayDetailSheet({
           </button>
         </div>
 
+        <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Quién está en casa
+        </h3>
         <ul className="flex flex-col gap-4">
           {detalle.map((m) => {
             const meta = m.resumen ? ESTADO_META[m.resumen] : null
@@ -111,8 +118,63 @@ export function DayDetailSheet({
             )
           })}
         </ul>
+
+        {agenda.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Agenda
+            </h3>
+            <ul className="flex flex-col">
+              {agenda.map((item, i) => (
+                <AgendaFila key={item.id} item={item} borde={i > 0} />
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+/** Una tarea/evento del día, solo lectura (completar/editar viven en Tareas/Inicio). */
+function AgendaFila({ item, borde }: { item: AgendaItem; borde: boolean }) {
+  const esTarea = item.tipo === "tarea"
+  const Icono = esTarea ? (item.completado ? CircleCheckIcon : CircleIcon) : CalendarIcon
+  return (
+    <li className={cn("flex items-center gap-3 py-2", borde && "border-t border-border/60")}>
+      <span
+        className={cn(
+          "flex size-5 shrink-0 items-center justify-center",
+          esTarea && item.completado ? "text-secondary-foreground" : "text-muted-foreground",
+          !esTarea && "text-primary",
+        )}
+        aria-hidden
+      >
+        <Icono className={esTarea ? "size-5" : "size-4"} />
+      </span>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span
+          className={cn(
+            "flex items-center gap-1.5 text-sm font-medium text-foreground",
+            item.completado && "text-muted-foreground line-through",
+          )}
+        >
+          {item.recurrente && (
+            <RepeatIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label="Se repite" />
+          )}
+          <span className="truncate">{item.titulo}</span>
+        </span>
+        <span className="truncate text-xs text-muted-foreground">
+          {item.hora ?? "Todo el día"}
+          {item.recurrente && item.recurrenciaResumen && (
+            <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>
+          )}
+        </span>
+      </div>
+
+      <AsignadosChips asignados={item.asignados} />
+    </li>
   )
 }
 

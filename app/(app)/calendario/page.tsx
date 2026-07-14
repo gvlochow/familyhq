@@ -8,8 +8,10 @@ import {
   construirGrillaMesFamilia,
   type MiembroCalendario,
 } from "@/lib/availability/mes-familia"
+import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { CalendarView } from "@/components/calendar/calendar-view"
 import { cargarTramosEfectivos } from "../_lib/tramos-efectivos"
+import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -57,6 +59,41 @@ export default async function CalendarioPage({
 
   const grilla = construirGrillaMesFamilia(miembros, base.toFormat("yyyy-MM"), hoy.toISODate()!)
 
+  // Agenda del rango visible de la grilla (mes + días de relleno de semanas vecinas),
+  // puntual + ocurrencias recurrentes, agrupada por día para el marcador y el detalle.
+  const desdeAgenda = base.startOf("month").startOf("week").toISODate()!
+  const hastaAgenda = base.endOf("month").endOf("week").toISODate()!
+  const miembrosRef: MiembroRef[] = integrantes.map((m) => ({
+    id: m.id,
+    inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
+    nombre: m.display_name.split(" ")[0],
+  }))
+  const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
+
+  const { data: agendaRaw } = integrantes.length
+    ? await supabase
+        .from("agenda_items")
+        .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
+        .gte("fecha", desdeAgenda)
+        .lte("fecha", hastaAgenda)
+    : { data: [] }
+  const puntuales = (agendaRaw ?? [])
+    .map((r) => mapearAgendaItem(r, miembrosById))
+    .filter((it): it is AgendaItem => it !== null)
+  const recurrentes = integrantes.length
+    ? await cargarAgendaRecurrente(supabase, miembrosById, desdeAgenda, hastaAgenda)
+    : []
+
+  const agendaPorDia: Record<string, AgendaItem[]> = {}
+  for (const it of [...puntuales, ...recurrentes]) {
+    ;(agendaPorDia[it.fecha] ??= []).push(it)
+  }
+  for (const fecha of Object.keys(agendaPorDia)) {
+    agendaPorDia[fecha].sort(
+      (a, b) => (a.hora ?? "").localeCompare(b.hora ?? "") || a.titulo.localeCompare(b.titulo, "es"),
+    )
+  }
+
   const etiquetaMes = capitalizar(base.setLocale("es").toFormat("LLLL yyyy"))
   const mesPrev = base.minus({ months: 1 }).toFormat("yyyy-MM")
   const mesNext = base.plus({ months: 1 }).toFormat("yyyy-MM")
@@ -69,7 +106,7 @@ export default async function CalendarioPage({
           <h1 className="font-heading text-2xl font-semibold text-foreground">
             Calendario
           </h1>
-          <p className="text-sm text-muted-foreground">Quién está fuera cada día.</p>
+          <p className="text-sm text-muted-foreground">Quién está fuera y qué hay agendado.</p>
         </div>
 
         {/* Navegación de mes. */}
@@ -95,7 +132,7 @@ export default async function CalendarioPage({
       </header>
 
       {integrantes.length > 0 ? (
-        <CalendarView grilla={grilla} miembros={miembros} />
+        <CalendarView grilla={grilla} miembros={miembros} agendaPorDia={agendaPorDia} />
       ) : (
         <p className="text-sm text-muted-foreground">
           Todavía no hay integrantes en el hogar.
