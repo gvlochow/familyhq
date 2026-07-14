@@ -17,12 +17,10 @@ import { EstadoSheet, type MiembroEditable } from "@/components/home/estado-shee
 export function HomeActions({
   miembros,
   editables,
-  nowISO,
   agregadoPor,
 }: {
   miembros: MiembroRef[]
   editables: MiembroEditable[]
-  nowISO: string
   agregadoPor: string | null
 }) {
   const [estado, setEstado] = useState(false)
@@ -54,9 +52,7 @@ export function HomeActions({
         </div>
       </div>
 
-      {estado && (
-        <EstadoSheet editables={editables} nowISO={nowISO} onClose={() => setEstado(false)} />
-      )}
+      {estado && <EstadoSheet editables={editables} onClose={() => setEstado(false)} />}
 
       {agregar && (
         <AgendaSheet

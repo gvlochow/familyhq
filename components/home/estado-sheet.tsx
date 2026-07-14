@@ -37,14 +37,16 @@ export interface MiembroEditable {
  */
 export function EstadoSheet({
   editables,
-  nowISO,
   onClose,
 }: {
   editables: MiembroEditable[]
-  nowISO: string
   onClose: () => void
 }) {
   const router = useRouter()
+  // "Ahora" se captura al ABRIR el sheet (que solo se monta al tocar el botón), no
+  // desde el render server: en una PWA abierta hace rato, la hora del render sería
+  // rancia y el intervalo "desde ahora" quedaría en el pasado.
+  const [nowISO] = useState(() => DateTime.now().toUTC().toISO()!)
   const [memberId, setMemberId] = useState(
     () => (editables.find((m) => m.esTu) ?? editables[0])?.id ?? "",
   )
