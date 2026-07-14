@@ -3,10 +3,11 @@ import { DateTime } from "luxon"
 import { createClient } from "@/lib/supabase/server"
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
+import { proximaPorRegla } from "@/lib/agenda/recurrente"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
 
-/** Horizonte de expansión de las recurrentes en la tab (los puntuales no se acotan). */
+/** Horizonte para hallar la próxima ocurrencia de cada recurrente (cubre lo mensual). */
 const HORIZONTE_DIAS = 60
 
 /**
@@ -41,13 +42,16 @@ export default async function TareasPage() {
     .map((r) => mapearAgendaItem(r, miembrosById))
     .filter((it): it is AgendaItem => it !== null)
 
-  // Ocurrencias recurrentes desde hoy hasta el horizonte (los puntuales no se acotan).
+  // Recurrentes COLAPSADAS a una fila por regla (su próxima ocurrencia pendiente), para
+  // que una actividad no inunde la lista con todas sus repeticiones.
   const hoy = DateTime.now().setZone(TZ_LOCAL)
-  const recurrentes = await cargarAgendaRecurrente(
-    supabase,
-    miembrosById,
-    hoy.toISODate()!,
-    hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
+  const recurrentes = proximaPorRegla(
+    await cargarAgendaRecurrente(
+      supabase,
+      miembrosById,
+      hoy.toISODate()!,
+      hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
+    ),
   )
 
   // Mezcla ordenada por fecha y luego hora (sin hora primero).

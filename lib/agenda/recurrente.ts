@@ -73,3 +73,25 @@ export function expandirRecurrentes(
   out.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0))
   return out
 }
+
+/**
+ * Colapsa las ocurrencias a UNA por regla: la PRÓXIMA pendiente (la de fecha más
+ * temprana no completada). Evita que una actividad recurrente inunde la lista de
+ * Tareas con todas sus ocurrencias del horizonte — ahí se ve una fila por regla que
+ * avanza a la siguiente al completarla. (El feed del Inicio NO usa esto: quiere ver
+ * cada ocurrencia próxima de la semana.)
+ *
+ * Asume `ocurrencias` ordenadas por fecha ascendente (como las da expandirRecurrentes):
+ * la primera pendiente de cada regla es su próxima.
+ */
+export function proximaPorRegla(ocurrencias: AgendaItem[]): AgendaItem[] {
+  const vistas = new Set<string>()
+  const out: AgendaItem[] = []
+  for (const it of ocurrencias) {
+    const rid = it.recurrenteId
+    if (!rid || it.completado || vistas.has(rid)) continue
+    vistas.add(rid)
+    out.push(it)
+  }
+  return out
+}
