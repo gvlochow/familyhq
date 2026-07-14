@@ -1,18 +1,25 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-14 (recurrencia en la agenda mergeada a main)_
+_Última actualización: 2026-07-14 (agenda en el calendario + recurrentes agrupadas en Tareas)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**Recurrencia en la agenda: MERGEADA y PUSHEADA a `main`** (`main` @ `0642c8a`+docs). Todo verde (tsc + lint + 100 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). Elige el próximo frente:
+**Agenda en el calendario (día combinado) + recurrentes agrupadas en Tareas: MERGEADO y PUSHEADO a `main`** (`main` @ `9c54ee0`). Todo verde (tsc + lint + 103 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). Elige el próximo frente:
 
 - **Opciones de próximo paso** (con el usuario):
   1. **Lista de compras** compartida (otro pilar de retención; tablas `shopping_lists`/`shopping_items` existen, sin UI).
   2. **Historial/puntaje de tareas** (estilo Todoist): ya se guarda `completado_por` + `completado_at` (en `agenda_items` y `recurring_completions`); falta el subsistema (log + score).
-  3. **Excepciones de recurrencia** (saltar/editar una sola ocurrencia): diferido en esta v1 (hoy eliminar = borrar la regla completa).
-  4. **Config de Vercel** para desplegar (ver Pendientes).
-- **Deuda menor anotada** (no urgen): endurecer el "0 filas" en `marcarCompletado`/`eliminarAgendaItem`/`eliminarActividadRecurrente` con `.select()`; cap/filtrar el commute rutinario del fijo en el feed del Inicio; `tramosDe(m)` se computa 2× por integrante en el home. Recurrencia: un evento recurrente semanal puede listar muchas ocurrencias en el horizonte de 60d de la tab Tareas (sin "mostrar solo la próxima"); un override corto (<3h) NO repinta la celda del calendario (piso `resumirDia`=180min).
-- **Estado operativo:** `main` @ `0642c8a` (+ commit docs, pusheado), verde (tsc + lint + 100 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, `availability_overrides` intra-día, `agenda_items`, y recurrencia `20260714180000`: recurring_activities extendida + recurring_completions). El member variable demo SÍ tiene `availability_segments` hoy. Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
+  3. **Excepciones de recurrencia** (saltar/editar una sola ocurrencia): diferido (hoy eliminar = borrar la regla completa).
+  4. **Completar/editar agenda DESDE el calendario** (hoy el detalle del día es solo lectura), y/o **toggle "Casa | Agenda"** en la grilla (diferido; el día combinado ya cubre el 80%).
+  5. **Config de Vercel** para desplegar (ver Pendientes).
+- **Deuda menor anotada** (no urgen): endurecer el "0 filas" en `marcarCompletado`/`eliminarAgendaItem`/`eliminarActividadRecurrente` con `.select()`; cap/filtrar el commute rutinario del fijo en el feed del Inicio; `tramosDe(m)` se computa 2× por integrante en el home. Recurrencia: un override corto (<3h) NO repinta la celda del calendario (piso `resumirDia`=180min). `AgendaFila` (detalle del día, solo lectura) duplica algo del `Fila` de la tab Tareas.
+- **Estado operativo:** `main` @ `9c54ee0` (pusheado), verde (tsc + lint + 103 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, `availability_overrides` intra-día, `agenda_items`, y recurrencia `20260714180000`). El member variable demo SÍ tiene `availability_segments` hoy. Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
 - **Diseño objetivo del Inicio:** `mockups/FamilyHQ_Home.png` (referencia del usuario). Ver memoria `vista-familiar-direccion`.
 - **Recordatorios de tono/tooling:** sin voseo (usar "tú"); pnpm (no npm); Supabase remoto sin Docker (migraciones con `pnpm supabase db push --linked`, types con `gen types --linked`); vitest no resuelve `@/` ni `server-only` y `.env.local` es CRLF/LF mixto (ver memorias).
+
+## Hito: agenda en el calendario + recurrentes agrupadas (2026-07-14, merges `fcce0b4`/`9c54ee0`)
+- **Decisión de producto (con el usuario):** las tareas/eventos entran al calendario como **capa secundaria de UN solo calendario**, NO un segundo calendario ni un toggle (por ahora). Se descartó "dos calendarios separados" (duplica navegación, parte el modelo mental).
+- **Tareas — recurrentes agrupadas** (`fcce0b4`): en la tab Tareas cada actividad recurrente se **colapsa a una fila** (su próxima ocurrencia pendiente, `proximaPorRegla`; avanza al completar), para que un evento semanal no liste ~26 filas en 60d. El feed del Inicio NO colapsa (muestra cada ocurrencia de la semana).
+- **Calendario — día combinado** (`9c54ee0`): la página carga la agenda del rango visible de la grilla (puntual `agenda_items` + `cargarAgendaRecurrente`) y la agrupa por día (`agendaPorDia`). La grilla del mes marca con un **punto** los días con agenda (+ leyenda "Con agenda"); el **detalle del día** (barras de disponibilidad) suma abajo la sección **"Agenda"** de ese día (ícono tarea/evento, hora, resumen de recurrencia, asignados) — SOLO LECTURA (completar/editar siguen en Tareas/Inicio). `CalendarView`/`MonthGridFamily`/`DayDetailSheet` reciben `agendaPorDia`.
+- **Verde:** tsc + lint + 103 tests + build. Sondas RLS en vivo (demo): colapso (evento semanal 26→1) y agrupación por día (puntual + recurrente coinciden en su día). **Diferido:** completar/editar desde el calendario; toggle "Casa | Agenda".
 
 ## Hito: recurrencia en la agenda (2026-07-14, merge `0642c8a`)
 - **Modelo (acordado con el usuario):** reusar `recurring_activities` como la REGLA + **expandir al LEER** (sin materializar filas) + completado por-ocurrencia. Ver memoria `agenda-recurrencia`.
