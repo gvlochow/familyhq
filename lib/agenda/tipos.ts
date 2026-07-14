@@ -34,6 +34,17 @@ export interface AgendaItem {
   asignados: MiembroRef[]
   /** Nombre de quién lo agregó (registro visual). */
   agregadoPor: string | null
+  /**
+   * Marcadores de recurrencia. Una ocurrencia EXPANDIDA de una regla recurrente los
+   * lleva; un item puntual (fila de agenda_items) no. La UI y las acciones ramifican
+   * por `recurrente` (completar/eliminar tocan recurring_completions / la regla, no
+   * agenda_items).
+   */
+  recurrente?: boolean
+  /** id de la regla (recurring_activities) — solo si recurrente. */
+  recurrenteId?: string
+  /** Resumen legible de la recurrencia ("cada 5 del mes") — solo si recurrente. */
+  recurrenciaResumen?: string
 }
 
 /** Fila cruda de agenda_items (subconjunto que leen las pantallas). */

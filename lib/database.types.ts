@@ -325,34 +325,49 @@ export type Database = {
       }
       recurring_activities: {
         Row: {
+          asignado_a: string[]
           created_at: string
           created_by: string | null
+          fecha_fin: string | null
+          fecha_inicio: string
+          hora: string | null
           household_id: string
           id: string
           payment_link: string | null
           recurrence: Json
           reminder_offset_hours: number | null
-          title: string
+          tipo: string
+          titulo: string
         }
         Insert: {
+          asignado_a?: string[]
           created_at?: string
           created_by?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string
+          hora?: string | null
           household_id: string
           id?: string
           payment_link?: string | null
           recurrence: Json
           reminder_offset_hours?: number | null
-          title: string
+          tipo?: string
+          titulo: string
         }
         Update: {
+          asignado_a?: string[]
           created_at?: string
           created_by?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string
+          hora?: string | null
           household_id?: string
           id?: string
           payment_link?: string | null
           recurrence?: Json
           reminder_offset_hours?: number | null
-          title?: string
+          tipo?: string
+          titulo?: string
         }
         Relationships: [
           {
@@ -367,6 +382,45 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_completions: {
+        Row: {
+          completado_at: string
+          completado_por: string | null
+          fecha: string
+          id: string
+          recurring_activity_id: string
+        }
+        Insert: {
+          completado_at?: string
+          completado_por?: string | null
+          fecha: string
+          id?: string
+          recurring_activity_id: string
+        }
+        Update: {
+          completado_at?: string
+          completado_por?: string | null
+          fecha?: string
+          id?: string
+          recurring_activity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_completions_completado_por_fkey"
+            columns: ["completado_por"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_completions_recurring_activity_id_fkey"
+            columns: ["recurring_activity_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_activities"
             referencedColumns: ["id"]
           },
         ]

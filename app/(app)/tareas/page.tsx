@@ -3,7 +3,11 @@ import { DateTime } from "luxon"
 import { createClient } from "@/lib/supabase/server"
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
+import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
+
+/** Horizonte de expansión de las recurrentes en la tab (los puntuales no se acotan). */
+const HORIZONTE_DIAS = 60
 
 /**
  * Tab Tareas: las tareas y eventos puntuales del hogar (agenda_items). Server
@@ -33,13 +37,28 @@ export default async function TareasPage() {
   }))
   const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
 
-  const items: AgendaItem[] = (agendaRaw ?? [])
+  const puntuales: AgendaItem[] = (agendaRaw ?? [])
     .map((r) => mapearAgendaItem(r, miembrosById))
     .filter((it): it is AgendaItem => it !== null)
 
+  // Ocurrencias recurrentes desde hoy hasta el horizonte (los puntuales no se acotan).
+  const hoy = DateTime.now().setZone(TZ_LOCAL)
+  const recurrentes = await cargarAgendaRecurrente(
+    supabase,
+    miembrosById,
+    hoy.toISODate()!,
+    hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
+  )
+
+  // Mezcla ordenada por fecha y luego hora (sin hora primero).
+  const items: AgendaItem[] = [...puntuales, ...recurrentes].sort((a, b) => {
+    if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1
+    return (a.hora ?? "").localeCompare(b.hora ?? "")
+  })
+
   const yo = integrantes.find((m) => m.user_id === user?.id)
   const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
-  const nowISO = DateTime.now().setZone(TZ_LOCAL).toISO()!
+  const nowISO = hoy.toISO()!
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-4 px-6 pt-8 pb-28">

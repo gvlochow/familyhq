@@ -33,7 +33,7 @@ export function ProximoList({ filas, nowISO }: { filas: FilaFeed[]; nowISO: stri
               )}
             >
               {f.clase === "agenda" && f.item.tipo === "tarea" ? (
-                <CompletarTarea id={f.item.id} />
+                <CompletarTarea item={f.item} />
               ) : (
                 <Icono fila={f} />
               )}

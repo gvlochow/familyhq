@@ -7,10 +7,24 @@ import { XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { TIPOS_AGENDA, type MiembroRef, type TipoAgenda } from "@/lib/agenda/tipos"
-import { crearAgendaItem } from "@/app/(app)/tareas/actions"
+import type { Recurrencia } from "@/lib/agenda/recurrencia"
+import { crearAgendaItem, crearActividadRecurrente } from "@/app/(app)/tareas/actions"
 import { cn } from "@/lib/utils"
 
 const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" }
+
+/** Patrón de repetición elegible en el formulario. */
+type Patron = "mensual" | "semanal"
+/** Días de la semana en orden lunes→domingo (ISO 1..7) con su inicial. */
+const DIAS_SEMANA: { iso: number; letra: string }[] = [
+  { iso: 1, letra: "L" },
+  { iso: 2, letra: "M" },
+  { iso: 3, letra: "X" },
+  { iso: 4, letra: "J" },
+  { iso: 5, letra: "V" },
+  { iso: 6, letra: "S" },
+  { iso: 7, letra: "D" },
+]
 
 /**
  * Hoja inferior para crear una tarea o evento puntual. Se monta SOLO cuando está
@@ -35,11 +49,21 @@ export function AgendaSheet({
   const [todoElDia, setTodoElDia] = useState(true)
   const [hora, setHora] = useState("09:00")
   const [asignados, setAsignados] = useState<string[]>([])
+  // Recurrencia.
+  const [repite, setRepite] = useState(false)
+  const [patron, setPatron] = useState<Patron>("mensual")
+  const [diaMes, setDiaMes] = useState(1)
+  const [diasSemana, setDiasSemana] = useState<number[]>([])
+  const [fechaFin, setFechaFin] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
   const toggleAsignado = (id: string) =>
     setAsignados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  const toggleDiaSemana = (iso: number) =>
+    setDiasSemana((prev) => (prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso]))
+
+  const faltanDiasSemana = repite && patron === "semanal" && diasSemana.length === 0
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -51,13 +75,26 @@ export function AgendaSheet({
     e.preventDefault()
     setGuardando(true)
     setError(null)
-    const res = await crearAgendaItem({
-      tipo,
-      titulo,
-      fecha,
-      hora: todoElDia ? null : hora,
-      asignadoA: asignados,
-    })
+
+    const horaFinal = todoElDia ? null : hora
+    let res: { error?: string }
+    if (repite) {
+      const recurrence: Recurrencia =
+        patron === "mensual"
+          ? { tipo: "dia_mes", dia: diaMes }
+          : { tipo: "dias_semana", dias: diasSemana }
+      res = await crearActividadRecurrente({
+        tipo,
+        titulo,
+        hora: horaFinal,
+        recurrence,
+        asignadoA: asignados,
+        fechaFin: fechaFin || null,
+      })
+    } else {
+      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, asignadoA: asignados })
+    }
+
     setGuardando(false)
     if (res.error) {
       setError(res.error)
@@ -116,8 +153,19 @@ export function AgendaSheet({
           />
         </label>
 
-        <div className="flex gap-3">
-          <label className="flex flex-1 flex-col gap-1">
+        {/* Se repite (recurrencia). */}
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={repite}
+            onChange={(e) => setRepite(e.target.checked)}
+            className="size-4 rounded border-border accent-primary"
+          />
+          Se repite
+        </label>
+
+        {!repite ? (
+          <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">{tipo === "tarea" ? "Vence" : "Fecha"}</span>
             <input
               type="date"
@@ -126,18 +174,81 @@ export function AgendaSheet({
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </label>
-          {!todoElDia && (
-            <label className="flex flex-1 flex-col gap-1">
-              <span className="text-sm font-medium text-foreground">Hora</span>
+        ) : (
+          <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+            <fieldset className="flex gap-2">
+              <legend className="sr-only">Cada cuánto</legend>
+              {(["mensual", "semanal"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPatron(p)}
+                  aria-pressed={patron === p}
+                  className={cn(
+                    "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    patron === p
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {p === "mensual" ? "Cada mes" : "Cada semana"}
+                </button>
+              ))}
+            </fieldset>
+
+            {patron === "mensual" ? (
+              <label className="flex items-center justify-between gap-2 text-sm">
+                <span className="font-medium text-foreground">Día del mes</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={diaMes}
+                  onChange={(e) => setDiaMes(Math.min(31, Math.max(1, Number(e.target.value) || 1)))}
+                  className="w-20 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+            ) : (
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className="text-sm font-medium text-foreground">Días</legend>
+                <div className="flex justify-between gap-1">
+                  {DIAS_SEMANA.map((d) => {
+                    const activo = diasSemana.includes(d.iso)
+                    return (
+                      <button
+                        key={d.iso}
+                        type="button"
+                        onClick={() => toggleDiaSemana(d.iso)}
+                        aria-pressed={activo}
+                        aria-label={`Día ${d.letra}`}
+                        className={cn(
+                          "flex size-9 items-center justify-center rounded-full border text-sm font-medium transition-colors",
+                          activo
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        {d.letra}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
+
+            <label className="flex items-center justify-between gap-2 text-sm">
+              <span className="font-medium text-foreground">
+                Termina <span className="text-muted-foreground">(opcional)</span>
+              </span>
               <input
-                type="time"
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
-          )}
-        </div>
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-sm text-foreground">
           <input
@@ -148,6 +259,18 @@ export function AgendaSheet({
           />
           Todo el día
         </label>
+
+        {!todoElDia && (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-foreground">Hora</span>
+            <input
+              type="time"
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </label>
+        )}
 
         {/* Asignar a integrantes (opcional). */}
         {miembros.length > 0 && (
@@ -193,7 +316,7 @@ export function AgendaSheet({
 
         <button
           type="submit"
-          disabled={guardando || !titulo.trim()}
+          disabled={guardando || !titulo.trim() || faltanDiasSemana}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar"}
