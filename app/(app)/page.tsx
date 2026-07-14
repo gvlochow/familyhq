@@ -73,11 +73,19 @@ export default async function HomePage() {
       (a, b) => rank(a.estado) - rank(b.estado) || a.nombre.localeCompare(b.nombre, "es"),
     )
 
-  const miembrosTramos: MiembroTramos[] = integrantes.map((m) => ({
-    id: m.id,
-    nombre: m.display_name.split(" ")[0],
-    tramos: tramosDe(m),
-  }))
+  // El feed "Próximo en la casa" es para lo NOTABLE, no la rutina. Un horario fijo
+  // (9-18 todos los días) generaría "sale/llega" a diario e inundaría el feed con
+  // información irrelevante; su estado actual ya se ve en la tarjeta de arriba. Por
+  // eso el forecast solo toma la disponibilidad de quienes NO son de horario fijo
+  // (los variables/crew, cuyo cambio sí es noticia). Los 'ninguno' no aportan tramos
+  // de cambio (quedan en casa por default).
+  const miembrosTramos: MiembroTramos[] = integrantes
+    .filter((m) => m.tipo_horario !== "fijo")
+    .map((m) => ({
+      id: m.id,
+      nombre: m.display_name.split(" ")[0],
+      tramos: tramosDe(m),
+    }))
   const proximos = construirProximos(miembrosTramos, nowISO, DIAS)
 
   // Mapa de integrantes para resolver asignados y "agregado por".
