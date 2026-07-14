@@ -1,11 +1,11 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-14 (editar agenda + feed del Inicio sin commute del fijo)_
+_Última actualización: 2026-07-14 (Ajustes real: Hogar + Integrantes + Mi horario)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**Agenda completa (crear/editar/completar/eliminar, puntual + recurrente, en Inicio/Tareas/Calendario): MERGEADO y PUSHEADO a `main`** (`main` @ `f3cbd63`). Todo verde (tsc + lint + 103 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). **Se hizo un inventario completo de pendientes del MVP (2026-07-14) — ver la sección "Pendientes MVP (inventario)" más abajo.** Elige el próximo frente:
+**Ajustes real MERGEADO y PUSHEADO a `main`** (`main` @ `3764d8a`). Todo verde (tsc + lint + 106 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado; las 3 env vars YA están en `.env.local`). **Inventario de pendientes del MVP más abajo.** Elige el próximo frente:
 
-- **Recién hecho (este chat):** recurrentes agrupadas en Tareas (`fcce0b4`), agenda en el calendario día-combinado (`9c54ee0`), feed del Inicio sin el commute rutinario del fijo (`763e86e`), y **editar tareas/eventos + reglas recurrentes desde la lista** (`f3cbd63`).
-- **Grandes que faltan para el MVP (ver inventario):** **Lista de compras** (pilar de retención, sin UI); **Ajustes real** (hoy solo cierre de sesión); **PWA instalable** (sin manifest/service worker); **deploy en Vercel** (secretos del cron/cifrado). Menores/diferidos: historial/puntaje, excepciones de recurrencia, completar/editar agenda desde el calendario, invitar/vincular cuentas.
+- **Recién hecho (este chat):** recurrentes agrupadas (`fcce0b4`), agenda en el calendario día-combinado (`9c54ee0`), feed del Inicio sin commute del fijo (`763e86e`), editar agenda desde la lista (`f3cbd63`), y **Ajustes real** — Hogar (nombre), Integrantes (agregar/editar/quitar), Mi horario/rol (cambiar tipo, reconectar variable, editar fijo) (`3764d8a`).
+- **Grandes que faltan para el MVP:** **Lista de compras** (pilar de retención, sin UI); **PWA instalable** (sin manifest/service worker); **deploy en Vercel** (secretos ya en `.env.local`). Menores/diferidos: buffers en Ajustes, historial/puntaje, excepciones de recurrencia, completar/editar agenda desde el calendario, invitar/vincular cuentas.
 - **Deuda menor anotada** (no urgen): endurecer el "0 filas" en `marcarCompletado`/`eliminarAgendaItem`/`eliminarActividadRecurrente` con `.select()`; cap/filtrar el commute rutinario del fijo en el feed del Inicio; `tramosDe(m)` se computa 2× por integrante en el home. Recurrencia: un override corto (<3h) NO repinta la celda del calendario (piso `resumirDia`=180min). `AgendaFila` (detalle del día, solo lectura) duplica algo del `Fila` de la tab Tareas.
 - **Estado operativo:** `main` @ `9c54ee0` (pusheado), verde (tsc + lint + 103 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, `availability_overrides` intra-día, `agenda_items`, y recurrencia `20260714180000`). El member variable demo SÍ tiene `availability_segments` hoy. Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
 - **Diseño objetivo del Inicio:** `mockups/FamilyHQ_Home.png` (referencia del usuario). Ver memoria `vista-familiar-direccion`.
@@ -20,10 +20,10 @@ Estado de cada pilar del MVP (CLAUDE.md: PWA de organización familiar; diferenc
 - ✅ **Disponibilidad** a tramos intra-día (variable + fijo), **Inicio** "¿Cómo está la casa?", **Calendario** familiar con detalle de día, **"Actualizar mi estado"** (override manual).
 - ✅ **Agenda**: tareas/eventos puntuales + **recurrencia** (dia_mes/dias_semana) con completado por-ocurrencia; crear/editar/completar/eliminar; en Inicio (feed), Tareas (lista, recurrentes agrupadas) y Calendario (día combinado).
 - ✅ **Auth** (email+contraseña, Google OAuth), **nav shell**, **RLS** multi-tenant verificada.
+- ✅ **Ajustes real** (`3764d8a`): editar nombre del hogar; gestionar integrantes (agregar/editar/quitar administrados); "Mi horario/rol" (cambiar tipo, reconectar el rol variable, editar el horario fijo reusando el form del onboarding en `modo="ajustes"`). Falta menor: buffers de salida/llegada.
 
 **FALTA para el MVP (grande):**
 - [ ] **Lista de compras compartida** — pilar de retención del MVP. Tablas `shopping_lists`/`shopping_items` existen con RLS; **cero UI/lógica**. Es la feature grande que falta del "uso diario".
-- [ ] **Ajustes real** — hoy solo cierre de sesión. Falta: editar hogar (nombre), gestionar integrantes (editar/quitar), reconectar/editar el rol, editar horario fijo, buffers de salida/llegada. Varias piezas ya existen en el onboarding y se reusarían.
 - [ ] **PWA instalable** — el producto es "PWA" pero NO hay `manifest` ni service worker (no se instala en el teléfono, sin ícono en pantalla de inicio, sin offline básico). Es parte de la promesa del producto.
 - [ ] **Deploy en Vercel** — agregar `ICAL_ENCRYPTION_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; verificar el cron en prod. Sin esto no hay producto vivo para el piloto. **Los tres valores YA están en `.env.local`** (solo hay que copiarlos a Vercel).
 
@@ -38,6 +38,12 @@ Estado de cada pilar del MVP (CLAUDE.md: PWA de organización familiar; diferenc
 - [ ] **Deuda de UI menor**: `.select()` en `eliminarAgendaItem`/`eliminarActividadRecurrente`; `<OnboardingHeader>` (5 forms repiten header); `AgendaFila` (detalle del día) duplica algo del `Fila` de la tab.
 - [ ] (Parado) Analítica PostHog — retomar en el piloto.
 - [ ] (Post-MVP) Billing/Stripe — el esquema tiene campos de plan, sin billing.
+
+## Hito: Ajustes real (2026-07-14, merge `3764d8a`)
+- **Hogar**: editar el nombre (`renombrarHogar`, RLS al hogar).
+- **Integrantes**: lista todos; agrega perfiles administrados (reusa `agregarIntegrante`), edita nombre/rol (`editarIntegrante`, solo `user_id=null`) y quita (reusa `eliminarIntegrante`, con confirmación). Tu fila y las de otras cuentas, de solo lectura.
+- **Mi horario/rol**: cambia el tipo (variable/fijo vía `setTipoHorario`, que limpia la config del otro tipo); **variable** = estado de conexión + reconectar (`connectCalendar` compacto); **fijo** = editor real reusando `FixedScheduleForm` — se **parametrizó con `modo` ("onboarding"|"ajustes") + `bloquesIniciales` + `onGuardado`**; en modo ajustes va sin la chrome del wizard y prellenado. El onboarding queda intacto (modo por defecto). `bloquesDesdeFilas` (puro) reconstruye los 7 bloques desde `fixed_schedules`. Fix de review: sin config guardada, el editor parte del preset L-V (no todo libre).
+- **Sesión**: cerrar sesión (ya existía). **Verde:** tsc + lint + 106 tests + build. Sondas RLS en vivo por rebanada (renombrar/editar/proteger titular; camino de datos del horario).
 
 ## Hito: editar agenda + feed del Inicio sin commute del fijo (2026-07-14, merges `763e86e`/`f3cbd63`)
 - **Feed del Inicio sin el commute rutinario del fijo** (`763e86e`): un horario fijo (9-18 a diario) inundaba "Próximo en la casa" con "sale/llega" — el forecast ahora toma la disponibilidad SOLO de quienes no son `tipo_horario='fijo'` (su estado actual ya se ve en la tarjeta). Sonda: 8→0 entradas. (Un override sobre un fijo tampoco aparece en el feed por ahora; refinamiento anotado.)
