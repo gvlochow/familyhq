@@ -9,7 +9,7 @@ import {
   type MiembroCalendario,
 } from "@/lib/availability/mes-familia"
 import { CalendarView } from "@/components/calendar/calendar-view"
-import { tramosConDefault } from "@/lib/availability/miembros"
+import { cargarTramosEfectivos } from "../_lib/tramos-efectivos"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -39,35 +39,20 @@ export default async function CalendarioPage({
   const winInicioUtc = base.minus({ days: 7 }).startOf("day").toUTC().toISO()!
   const winFinUtc = base.endOf("month").plus({ days: 8 }).startOf("day").toUTC().toISO()!
 
-  const { data: tramosRaw } = integrantes.length
-    ? await supabase
-        .from("availability_segments")
-        .select("member_id, inicio_utc, fin_utc, estado")
-        .in(
-          "member_id",
-          integrantes.map((m) => m.id),
-        )
-        .lt("inicio_utc", winFinUtc)
-        .gt("fin_utc", winInicioUtc)
-    : { data: [] }
-
-  const porMiembro = new Map<string, { inicioUtc: string; finUtc: string; estado: string }[]>()
-  for (const t of tramosRaw ?? []) {
-    const arr = porMiembro.get(t.member_id) ?? []
-    arr.push({ inicioUtc: t.inicio_utc, finUtc: t.fin_utc, estado: t.estado })
-    porMiembro.set(t.member_id, arr)
-  }
+  // Tramos EFECTIVOS por integrante (clasificado/fijo + default + overrides),
+  // compuestos por el loader compartido (acotado por RLS al hogar).
+  const tramosPorMiembro = await cargarTramosEfectivos(
+    supabase,
+    integrantes,
+    winInicioUtc,
+    winFinUtc,
+  )
 
   const miembros: MiembroCalendario[] = integrantes.map((m) => ({
     id: m.id,
     nombre: m.display_name.split(" ")[0],
     inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
-    tramos: tramosConDefault(
-      m.tipo_horario,
-      porMiembro.get(m.id) ?? [],
-      winInicioUtc,
-      winFinUtc,
-    ),
+    tramos: tramosPorMiembro.get(m.id) ?? [],
   }))
 
   const grilla = construirGrillaMesFamilia(miembros, base.toFormat("yyyy-MM"), hoy.toISODate()!)
