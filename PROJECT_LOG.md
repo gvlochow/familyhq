@@ -2,7 +2,7 @@
 _Última actualización: 2026-07-14 (override manual "Actualizar mi estado" mergeado a main)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**"Actualizar mi estado" (override manual intra-día): MERGEADO a `main`** (`main` @ `9f6452b`, merge local sin `--no-ff`; **falta `git push`** — se dejó pendiente por la nota de "no tocar Vercel": confirmar con el usuario si un push a main gatilla build). Todo verde (tsc + lint + 81 tests + build) y verificado con sondas RLS en vivo. Elige el próximo frente:
+**"Actualizar mi estado" (override manual intra-día): MERGEADO y PUSHEADO a `main`** (`main` @ `ee063f0`). Todo verde (tsc + lint + 81 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). Elige el próximo frente:
 
 - **Opciones de próximo paso** (con el usuario):
   1. **Recurrencia** en la agenda (cuentas mensuales, etc.): reusar `recurring_activities`; necesita motor de expansión + completado por-ocurrencia. Se sumaría al feed como otra fuente (junto a disponibilidad + agenda puntual).
@@ -10,7 +10,7 @@ _Última actualización: 2026-07-14 (override manual "Actualizar mi estado" merg
   3. **Historial/puntaje de tareas** (estilo Todoist): ya se guarda `completado_por` + `completado_at`; falta el subsistema (log + score).
   4. **Config de Vercel** para desplegar (ver Pendientes).
 - **Deuda menor anotada** (no urgen): endurecer el "0 filas" en `marcarCompletado`/`eliminarAgendaItem` con `.select()`; cap/filtrar el commute rutinario del fijo en el feed del Inicio (hoy un fijo genera "sale/llega" diario); `tramosDe(m)` se computa 2× por integrante en el home. Del override: un override corto (<3h) NO repinta la celda del calendario (piso de `resumirDia`=180min) aunque sí cambie el "estado ahora" del Inicio y el detalle intra-día — es el comportamiento de diseño del piso, anotado por si confunde.
-- **Estado operativo:** `main` @ `9f6452b`, verde (tsc + lint + 81 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, drop de `availability_days`, `agenda_items`, y el rediseño de `availability_overrides` a intra-día `20260714160000`). El member variable demo SÍ tiene `availability_segments` hoy (se lee "fuera"). Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
+- **Estado operativo:** `main` @ `ee063f0` (pusheado), verde (tsc + lint + 81 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, drop de `availability_days`, `agenda_items`, y el rediseño de `availability_overrides` a intra-día `20260714160000`). El member variable demo SÍ tiene `availability_segments` hoy (se lee "fuera"). Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
 - **Diseño objetivo del Inicio:** `mockups/FamilyHQ_Home.png` (referencia del usuario). Ver memoria `vista-familiar-direccion`.
 - **Recordatorios de tono/tooling:** sin voseo (usar "tú"); pnpm (no npm); Supabase remoto sin Docker (migraciones con `pnpm supabase db push --linked`, types con `gen types --linked`); vitest no resuelve `@/` ni `server-only` y `.env.local` es CRLF/LF mixto (ver memorias).
 
