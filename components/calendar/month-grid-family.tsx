@@ -2,6 +2,7 @@ import type {
   GrillaMesFamilia,
   MiembroDia,
 } from "@/lib/availability/mes-familia"
+import type { AgendaItem } from "@/lib/agenda/tipos"
 import { LETRAS_DIA } from "@/lib/availability/dias"
 import { cn } from "@/lib/utils"
 
@@ -25,10 +26,12 @@ const MAX_CHIPS = 3
 export function MonthGridFamily({
   grilla,
   miembros,
+  agendaPorDia,
   onDiaClick,
 }: {
   grilla: GrillaMesFamilia
   miembros: { id: string; inicial: string; nombre: string }[]
+  agendaPorDia?: Record<string, AgendaItem[]>
   onDiaClick?: (fecha: string) => void
 }) {
   return (
@@ -58,25 +61,35 @@ export function MonthGridFamily({
           const fuera = d.miembros.filter((m) => m.estado && m.estado in INDICADOR)
           const visibles = fuera.slice(0, MAX_CHIPS)
           const resto = fuera.length - visibles.length
+          const tieneAgenda = (agendaPorDia?.[d.fecha]?.length ?? 0) > 0
 
           return (
             <button
               key={d.fecha}
               type="button"
               onClick={() => onDiaClick?.(d.fecha)}
-              aria-label={`Ver el ${d.dia}`}
+              aria-label={tieneAgenda ? `Ver el ${d.dia} (con agenda)` : `Ver el ${d.dia}`}
               className={cn(
                 "flex aspect-square flex-col gap-0.5 rounded-md p-1 text-left transition-colors hover:bg-muted/60",
                 d.esHoy ? "ring-2 ring-primary/50" : "ring-1 ring-border/60",
               )}
             >
-              <span
-                className={cn(
-                  "text-right text-xs tabular-nums",
-                  d.esHoy ? "font-semibold text-primary" : "text-foreground",
-                )}
-              >
-                {d.dia}
+              <span className="flex items-center justify-between">
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full bg-foreground/45",
+                    !tieneAgenda && "invisible",
+                  )}
+                  aria-hidden
+                />
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    d.esHoy ? "font-semibold text-primary" : "text-foreground",
+                  )}
+                >
+                  {d.dia}
+                </span>
               </span>
               {fuera.length > 0 && (
                 <span className="mt-auto flex flex-wrap gap-0.5">
@@ -128,6 +141,10 @@ export function MonthGridFamily({
           <li className="flex items-center gap-1.5">
             <span className="size-3 rounded-sm bg-secondary/60" aria-hidden />
             <span className="text-xs text-muted-foreground">En casa (sin marca)</span>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-foreground/45" aria-hidden />
+            <span className="text-xs text-muted-foreground">Con agenda</span>
           </li>
         </ul>
       </div>
