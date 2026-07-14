@@ -25,13 +25,14 @@ Estado de cada pilar del MVP (CLAUDE.md: PWA de organización familiar; diferenc
 - [ ] **Lista de compras compartida** — pilar de retención del MVP. Tablas `shopping_lists`/`shopping_items` existen con RLS; **cero UI/lógica**. Es la feature grande que falta del "uso diario".
 - [ ] **Ajustes real** — hoy solo cierre de sesión. Falta: editar hogar (nombre), gestionar integrantes (editar/quitar), reconectar/editar el rol, editar horario fijo, buffers de salida/llegada. Varias piezas ya existen en el onboarding y se reusarían.
 - [ ] **PWA instalable** — el producto es "PWA" pero NO hay `manifest` ni service worker (no se instala en el teléfono, sin ícono en pantalla de inicio, sin offline básico). Es parte de la promesa del producto.
-- [ ] **Deploy en Vercel** — agregar `ICAL_ENCRYPTION_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; verificar el cron en prod. Sin esto no hay producto vivo para el piloto.
+- [ ] **Deploy en Vercel** — agregar `ICAL_ENCRYPTION_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; verificar el cron en prod. Sin esto no hay producto vivo para el piloto. **Los tres valores YA están en `.env.local`** (solo hay que copiarlos a Vercel).
 
 **FALTA (menor / puede quedar post-MVP según alcance del piloto):**
 - [ ] **Invitar/vincular cuentas** — hoy solo perfiles administrados (`user_id=null`). Falta invitar por email + vincular cuando la persona se registra (trigger ya blindado). La copy del onboarding ya lo promete.
 - [ ] **Historial/puntaje de tareas** (estilo Todoist) — ya se guarda `completado_por`/`completado_at` en `agenda_items` y `recurring_completions`; falta el subsistema (log + score). Retención, no core.
 - [ ] **Excepciones de recurrencia** — saltar/editar UNA ocurrencia (hoy editar = toda la serie; eliminar = toda la regla).
 - [ ] **Completar/editar agenda desde el Calendario** (el detalle del día es solo lectura) y **toggle "Casa | Agenda"** en la grilla.
+- [ ] **Onboarding del calendario (rol variable) — ayuda al usuario** (pedido 2026-07-14): (a) incluir un **video tutorial** de cómo cargar/obtener la URL secreta del calendario; (b) agregar una nota tranquilizadora tipo **"no te preocupes, esto lo tienes que hacer una sola vez"** en `connect-calendar-form`. La nota es un cambio de copy chico; el video necesita el asset.
 - [ ] **Endurecer connectCalendar contra SSRF** antes de abrir a más usuarios (exige https pero sigue redirects; validar host/IP, bloquear rangos internos).
 - [ ] **Robustez del cron/overrides**: hash de evidencia por-día (hoy un día FUERA usa el hash de todo el bloque); endurecer el embed `members(buffer_llegada_min)`.
 - [ ] **Deuda de UI menor**: `.select()` en `eliminarAgendaItem`/`eliminarActividadRecurrente`; `<OnboardingHeader>` (5 forms repiten header); `AgendaFila` (detalle del día) duplica algo del `Fila` de la tab.
