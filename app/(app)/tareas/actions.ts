@@ -81,6 +81,38 @@ export async function crearAgendaItem(input: {
   return {}
 }
 
+/** Edita un item de agenda puntual. */
+export async function editarAgendaItem(
+  id: string,
+  input: { tipo: string; titulo: string; fecha: string; hora: string | null; asignadoA?: string[] },
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const miembro = await miembroActual(supabase)
+  if (!miembro) return { error: "No perteneces a un hogar." }
+
+  const titulo = input.titulo.trim()
+  if (!titulo) return { error: "Escribe un título." }
+  if (!esTipoAgenda(input.tipo)) return { error: "Tipo inválido." }
+  if (!RE_FECHA.test(input.fecha)) return { error: "Elige una fecha." }
+  const hora = input.hora?.trim() ? input.hora.trim() : null
+  if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+
+  const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+
+  const { data, error } = await supabase
+    .from("agenda_items")
+    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, asignado_a: asignadoA })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle()
+  if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
+  if (!data) return { error: "No se encontró la tarea." }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  return {}
+}
+
 /**
  * Crea una actividad RECURRENTE (regla en recurring_activities). Las ocurrencias no
  * se materializan: se expanden al leer. fecha_inicio = hoy (la regla no genera antes).
@@ -121,6 +153,54 @@ export async function crearActividadRecurrente(input: {
     created_by: miembro.id,
   })
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  return {}
+}
+
+/** Edita una actividad recurrente (regla). No toca fecha_inicio ni las completaciones. */
+export async function editarActividadRecurrente(
+  ruleId: string,
+  input: {
+    tipo: string
+    titulo: string
+    hora: string | null
+    recurrence: unknown
+    asignadoA?: string[]
+    fechaFin?: string | null
+  },
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const miembro = await miembroActual(supabase)
+  if (!miembro) return { error: "No perteneces a un hogar." }
+
+  const titulo = input.titulo.trim()
+  if (!titulo) return { error: "Escribe un título." }
+  if (!esTipoAgenda(input.tipo)) return { error: "Tipo inválido." }
+  if (!esRecurrencia(input.recurrence)) return { error: "Elige cuándo se repite." }
+  const hora = input.hora?.trim() ? input.hora.trim() : null
+  if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+  const fechaFin = input.fechaFin?.trim() ? input.fechaFin.trim() : null
+  if (fechaFin && !RE_FECHA.test(fechaFin)) return { error: "Fecha de término inválida." }
+
+  const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+
+  const { data, error } = await supabase
+    .from("recurring_activities")
+    .update({
+      tipo: input.tipo,
+      titulo,
+      hora,
+      recurrence: input.recurrence as Json,
+      asignado_a: asignadoA,
+      fecha_fin: fechaFin,
+    })
+    .eq("id", ruleId)
+    .select("id")
+    .maybeSingle()
+  if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
+  if (!data) return { error: "No se encontró la actividad." }
 
   revalidatePath("/tareas")
   revalidatePath("/")

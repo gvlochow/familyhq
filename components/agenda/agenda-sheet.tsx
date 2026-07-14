@@ -6,9 +6,19 @@ import { DateTime } from "luxon"
 import { XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
-import { TIPOS_AGENDA, type MiembroRef, type TipoAgenda } from "@/lib/agenda/tipos"
+import {
+  TIPOS_AGENDA,
+  type AgendaItem,
+  type MiembroRef,
+  type TipoAgenda,
+} from "@/lib/agenda/tipos"
 import type { Recurrencia } from "@/lib/agenda/recurrencia"
-import { crearAgendaItem, crearActividadRecurrente } from "@/app/(app)/tareas/actions"
+import {
+  crearAgendaItem,
+  crearActividadRecurrente,
+  editarAgendaItem,
+  editarActividadRecurrente,
+} from "@/app/(app)/tareas/actions"
 import { cn } from "@/lib/utils"
 
 const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" }
@@ -36,25 +46,34 @@ const DIAS_SEMANA: { iso: number; letra: string }[] = [
 export function AgendaSheet({
   miembros,
   agregadoPor,
+  editar,
   onClose,
 }: {
   miembros: MiembroRef[]
   agregadoPor: string | null
+  /** Item a editar. Si está presente, la hoja es de EDICIÓN (prellena y actualiza). */
+  editar?: AgendaItem
   onClose: () => void
 }) {
   const router = useRouter()
-  const [tipo, setTipo] = useState<TipoAgenda>("tarea")
-  const [titulo, setTitulo] = useState("")
-  const [fecha, setFecha] = useState(() => DateTime.now().setZone(TZ_LOCAL).toISODate()!)
-  const [todoElDia, setTodoElDia] = useState(true)
-  const [hora, setHora] = useState("09:00")
-  const [asignados, setAsignados] = useState<string[]>([])
-  // Recurrencia.
-  const [repite, setRepite] = useState(false)
-  const [patron, setPatron] = useState<Patron>("mensual")
-  const [diaMes, setDiaMes] = useState(1)
-  const [diasSemana, setDiasSemana] = useState<number[]>([])
-  const [fechaFin, setFechaFin] = useState("")
+  const esEdicion = !!editar
+  const rec = editar?.recurrencia
+  const [tipo, setTipo] = useState<TipoAgenda>(editar?.tipo ?? "tarea")
+  const [titulo, setTitulo] = useState(editar?.titulo ?? "")
+  const [fecha, setFecha] = useState(() =>
+    editar && !editar.recurrente ? editar.fecha : DateTime.now().setZone(TZ_LOCAL).toISODate()!,
+  )
+  const [todoElDia, setTodoElDia] = useState(editar ? editar.hora === null : true)
+  const [hora, setHora] = useState(editar?.hora ?? "09:00")
+  const [asignados, setAsignados] = useState<string[]>(
+    editar?.asignados.map((a) => a.id) ?? [],
+  )
+  // Recurrencia. En edición, el tipo (puntual/recurrente) queda fijo: no se ofrece el toggle.
+  const [repite, setRepite] = useState(editar?.recurrente ?? false)
+  const [patron, setPatron] = useState<Patron>(rec?.tipo === "dias_semana" ? "semanal" : "mensual")
+  const [diaMes, setDiaMes] = useState(rec?.tipo === "dia_mes" ? rec.dia : 1)
+  const [diasSemana, setDiasSemana] = useState<number[]>(rec?.tipo === "dias_semana" ? rec.dias : [])
+  const [fechaFin, setFechaFin] = useState(editar?.recurrenteFechaFin ?? "")
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -77,12 +96,30 @@ export function AgendaSheet({
     setError(null)
 
     const horaFinal = todoElDia ? null : hora
+    const recurrence: Recurrencia =
+      patron === "mensual"
+        ? { tipo: "dia_mes", dia: diaMes }
+        : { tipo: "dias_semana", dias: diasSemana }
+
     let res: { error?: string }
-    if (repite) {
-      const recurrence: Recurrencia =
-        patron === "mensual"
-          ? { tipo: "dia_mes", dia: diaMes }
-          : { tipo: "dias_semana", dias: diasSemana }
+    if (esEdicion && editar!.recurrente && editar!.recurrenteId) {
+      res = await editarActividadRecurrente(editar!.recurrenteId, {
+        tipo,
+        titulo,
+        hora: horaFinal,
+        recurrence,
+        asignadoA: asignados,
+        fechaFin: fechaFin || null,
+      })
+    } else if (esEdicion) {
+      res = await editarAgendaItem(editar!.id, {
+        tipo,
+        titulo,
+        fecha,
+        hora: horaFinal,
+        asignadoA: asignados,
+      })
+    } else if (repite) {
       res = await crearActividadRecurrente({
         tipo,
         titulo,
@@ -105,7 +142,7 @@ export function AgendaSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Nueva tarea o evento">
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={esEdicion ? "Editar tarea o evento" : "Nueva tarea o evento"}>
       <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px]" />
 
       <form
@@ -115,7 +152,9 @@ export function AgendaSheet({
         <div className="mx-auto h-1 w-10 rounded-full bg-border" aria-hidden />
 
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-semibold text-foreground">Agregar</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">
+            {esEdicion ? "Editar" : "Agregar"}
+          </h2>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="-mr-1 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted">
             <XIcon className="size-5" />
           </button>
@@ -153,16 +192,25 @@ export function AgendaSheet({
           />
         </label>
 
-        {/* Se repite (recurrencia). */}
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={repite}
-            onChange={(e) => setRepite(e.target.checked)}
-            className="size-4 rounded border-border accent-primary"
-          />
-          Se repite
-        </label>
+        {esEdicion && editar!.recurrente && (
+          <p className="text-xs text-muted-foreground">
+            Editas toda la serie recurrente, no solo esta fecha.
+          </p>
+        )}
+
+        {/* Se repite (recurrencia). En edición el tipo queda fijo (no se puede convertir
+            un puntual en recurrente ni viceversa), así que no se ofrece el toggle. */}
+        {!esEdicion && (
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={repite}
+              onChange={(e) => setRepite(e.target.checked)}
+              className="size-4 rounded border-border accent-primary"
+            />
+            Se repite
+          </label>
+        )}
 
         {!repite ? (
           <label className="flex flex-col gap-1">
@@ -310,7 +358,7 @@ export function AgendaSheet({
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {agregadoPor && (
+        {!esEdicion && agregadoPor && (
           <p className="text-xs text-muted-foreground">Lo agregas tú ({agregadoPor}).</p>
         )}
 
@@ -319,7 +367,7 @@ export function AgendaSheet({
           disabled={guardando || !titulo.trim() || faltanDiasSemana}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
-          {guardando ? "Guardando…" : "Guardar"}
+          {guardando ? "Guardando…" : esEdicion ? "Guardar cambios" : "Guardar"}
         </button>
       </form>
     </div>
