@@ -1,12 +1,14 @@
 import { LogOutIcon } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
+import { bloquesDesdeFilas } from "@/lib/members/horario-fijo"
 import { Button } from "@/components/ui/button"
 import { HogarSection } from "@/components/ajustes/hogar-section"
 import {
   IntegrantesSection,
   type IntegranteVista,
 } from "@/components/ajustes/integrantes-section"
+import { HorarioSection } from "@/components/ajustes/horario-section"
 import { signOut } from "./actions"
 
 /**
@@ -25,6 +27,24 @@ export default async function AjustesPage() {
     supabase.from("households").select("name").limit(1).maybeSingle(),
     supabase.from("members").select("id, display_name, user_id, rol, tipo_horario"),
   ])
+
+  // Mi horario: la conexión del rol variable y/o los bloques del horario fijo.
+  const yo = (members ?? []).find((m) => m.user_id === user?.id)
+  const [{ data: conexion }, { data: filasFijo }] = yo
+    ? await Promise.all([
+        supabase
+          .from("roster_connections")
+          .select("last_synced_at")
+          .eq("member_id", yo.id)
+          .maybeSingle(),
+        supabase
+          .from("fixed_schedules")
+          .select(
+            "dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin",
+          )
+          .eq("member_id", yo.id),
+      ])
+    : [{ data: null }, { data: [] }]
 
   const integrantes: IntegranteVista[] = (members ?? []).map((m) => ({
     id: m.id,
@@ -46,6 +66,15 @@ export default async function AjustesPage() {
       {hogar?.name && <HogarSection nombre={hogar.name} />}
 
       <IntegrantesSection integrantes={integrantes} />
+
+      {yo && (
+        <HorarioSection
+          tipo={yo.tipo_horario}
+          variableConectado={!!conexion}
+          ultimaSync={conexion?.last_synced_at ?? null}
+          bloquesFijo={bloquesDesdeFilas(filasFijo ?? [])}
+        />
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">Sesión</h2>

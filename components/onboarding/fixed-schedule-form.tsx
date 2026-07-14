@@ -90,12 +90,24 @@ function TimeField({
   )
 }
 
-export function FixedScheduleForm() {
+export function FixedScheduleForm({
+  modo = "onboarding",
+  bloquesIniciales,
+  onGuardado,
+}: {
+  /** "onboarding": chrome del wizard + avanza al paso siguiente. "ajustes": compacto + onGuardado. */
+  modo?: "onboarding" | "ajustes"
+  /** Bloques a prellenar (Ajustes usa los guardados); si falta, parte de los por defecto. */
+  bloquesIniciales?: BloqueDia[]
+  /** Callback tras guardar con éxito (Ajustes hace router.refresh y cierra). */
+  onGuardado?: () => void
+} = {}) {
   const router = useRouter()
   const panelBaseId = useId()
+  const esOnboarding = modo === "onboarding"
 
   const [bloques, setBloques] = useState<BloqueDia[]>(() =>
-    BLOQUES_POR_DEFECTO.map((b) => ({ ...b }))
+    (bloquesIniciales ?? BLOQUES_POR_DEFECTO).map((b) => ({ ...b }))
   )
   const [abierto, setAbierto] = useState<DiaSemana | null>(1)
   const [pending, setPending] = useState(false)
@@ -167,6 +179,11 @@ export function FixedScheduleForm() {
       return
     }
 
+    if (!esOnboarding) {
+      setPending(false)
+      onGuardado?.()
+      return
+    }
     // Avance explícito al paso de integrantes (la guarda permite volver atrás).
     router.push(ONBOARDING_INTEGRANTES_ROUTE)
   }
@@ -176,8 +193,13 @@ export function FixedScheduleForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10"
+      className={cn(
+        esOnboarding
+          ? "mx-auto flex min-h-svh w-full max-w-sm flex-col px-6 pt-8 pb-10"
+          : "flex w-full flex-col gap-6",
+      )}
     >
+      {esOnboarding && (
       <header className="flex flex-col gap-5">
         <OnboardingBackLink href={ONBOARDING_HORARIO_ROUTE} />
 
@@ -217,16 +239,23 @@ export function FixedScheduleForm() {
           </div>
         </div>
       </header>
+      )}
 
-      <div className="flex flex-1 flex-col justify-center gap-6 py-10">
-        <div className="flex flex-col gap-2 text-center">
-          <h1 className="font-heading text-2xl font-semibold text-foreground">
-            Tu horario de trabajo
-          </h1>
-          <p className="text-muted-foreground">
-            Aplica un horario a todos los días y luego ajusta los que cambien.
-          </p>
-        </div>
+      <div
+        className={cn(
+          esOnboarding ? "flex flex-1 flex-col justify-center gap-6 py-10" : "flex flex-col gap-6",
+        )}
+      >
+        {esOnboarding && (
+          <div className="flex flex-col gap-2 text-center">
+            <h1 className="font-heading text-2xl font-semibold text-foreground">
+              Tu horario de trabajo
+            </h1>
+            <p className="text-muted-foreground">
+              Aplica un horario a todos los días y luego ajusta los que cambien.
+            </p>
+          </div>
+        )}
 
         {/* Plantilla rápida: aplica un rango a todos los días de trabajo. */}
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4">
@@ -442,7 +471,7 @@ export function FixedScheduleForm() {
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending && <Loader2Icon className="size-4 animate-spin" />}
-        {pending ? "Guardando..." : "Continuar"}
+        {pending ? "Guardando..." : esOnboarding ? "Continuar" : "Guardar horario"}
       </Button>
     </form>
   )
