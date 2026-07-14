@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { expandirRecurrentes, idOcurrencia, type ReglaRecurrenteDB } from './recurrente'
-import type { MiembroRef } from './tipos'
+import {
+  expandirRecurrentes,
+  idOcurrencia,
+  proximaPorRegla,
+  type ReglaRecurrenteDB,
+} from './recurrente'
+import type { AgendaItem, MiembroRef } from './tipos'
 
 const miembros = new Map<string, MiembroRef>([
   ['m1', { id: 'm1', inicial: 'A', nombre: 'Ana' }],
@@ -69,5 +74,38 @@ describe('expandirRecurrentes', () => {
     const items = expandirRecurrentes([regla(), semanal], new Set(), '2026-07-01', '2026-07-08', miembros)
     // dia_mes 5 -> 07-05 (domingo); dias_semana martes -> 07-07. Ordenadas.
     expect(items.map((i) => i.fecha)).toEqual(['2026-07-05', '2026-07-07'])
+  })
+})
+
+describe('proximaPorRegla', () => {
+  function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, completado, asignados: [], agregadoPor: null, recurrente: true, recurrenteId }
+  }
+
+  it('deja una fila por regla: su ocurrencia más temprana', () => {
+    const items = proximaPorRegla([
+      oc('r1', '2026-08-05'),
+      oc('r1', '2026-09-05'),
+      oc('r2', '2026-08-07'),
+      oc('r2', '2026-08-14'),
+    ])
+    expect(items.map((i) => [i.recurrenteId, i.fecha])).toEqual([
+      ['r1', '2026-08-05'],
+      ['r2', '2026-08-07'],
+    ])
+  })
+
+  it('salta las completadas y muestra la próxima PENDIENTE de la regla', () => {
+    const items = proximaPorRegla([
+      oc('r1', '2026-08-05', true), // completada -> se salta
+      oc('r1', '2026-09-05'), // próxima pendiente
+    ])
+    expect(items).toHaveLength(1)
+    expect(items[0].fecha).toBe('2026-09-05')
+  })
+
+  it('una regla con todas sus ocurrencias completadas no aparece', () => {
+    const items = proximaPorRegla([oc('r1', '2026-08-05', true), oc('r1', '2026-09-05', true)])
+    expect(items).toEqual([])
   })
 })
