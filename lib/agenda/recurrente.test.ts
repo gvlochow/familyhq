@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  expandirRecurrentes,
-  idOcurrencia,
-  parseIdOcurrencia,
-  type ReglaRecurrenteDB,
-} from './recurrente'
+import { expandirRecurrentes, idOcurrencia, type ReglaRecurrenteDB } from './recurrente'
 import type { MiembroRef } from './tipos'
 
 const miembros = new Map<string, MiembroRef>([
@@ -27,14 +22,9 @@ function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
   }
 }
 
-describe('idOcurrencia / parseIdOcurrencia', () => {
-  it('ida y vuelta', () => {
-    const id = idOcurrencia('abc-123', '2026-08-05')
-    expect(id).toBe('rec:abc-123:2026-08-05')
-    expect(parseIdOcurrencia(id)).toEqual({ ruleId: 'abc-123', fecha: '2026-08-05' })
-  })
-  it('un id puntual (no recurrente) da null', () => {
-    expect(parseIdOcurrencia('550e8400-e29b-41d4-a716-446655440000')).toBeNull()
+describe('idOcurrencia', () => {
+  it('compone el id sintético de una ocurrencia', () => {
+    expect(idOcurrencia('abc-123', '2026-08-05')).toBe('rec:abc-123:2026-08-05')
   })
 })
 

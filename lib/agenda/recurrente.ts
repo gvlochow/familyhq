@@ -23,15 +23,13 @@ export interface ReglaRecurrenteDB {
   created_by: string | null
 }
 
-/** id sintético de una ocurrencia recurrente. */
+/**
+ * id sintético de una ocurrencia recurrente. Distingue las ocurrencias (que no tienen
+ * fila propia) de los items puntuales en las listas; las acciones usan recurrenteId +
+ * fecha del AgendaItem, no parsean este id.
+ */
 export function idOcurrencia(ruleId: string, fecha: string): string {
   return `rec:${ruleId}:${fecha}`
-}
-
-/** Parsea un id sintético a {ruleId, fecha}; null si no es una ocurrencia recurrente. */
-export function parseIdOcurrencia(id: string): { ruleId: string; fecha: string } | null {
-  const m = /^rec:(.+):(\d{4}-\d{2}-\d{2})$/.exec(id)
-  return m ? { ruleId: m[1], fecha: m[2] } : null
 }
 
 /**
