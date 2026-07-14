@@ -89,6 +89,17 @@ export default async function HomePage() {
   const yo = integrantes.find((m) => m.user_id === user?.id)
   const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
 
+  // Integrantes a los que el usuario puede editar el estado: él mismo + los perfiles
+  // administrados (sin cuenta) del hogar. NO otros titulares de cuenta.
+  const editables = integrantes
+    .filter((m) => m.user_id === user?.id || m.user_id === null)
+    .map((m) => ({
+      id: m.id,
+      nombre: m.display_name.split(" ")[0],
+      inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
+      esTu: m.user_id === user?.id,
+    }))
+
   // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
   const { data: agendaRaw } = await supabase
     .from("agenda_items")
@@ -155,7 +166,12 @@ export default async function HomePage() {
         <ProximoList filas={filas} nowISO={nowISO} />
       </div>
 
-      <HomeActions miembros={miembrosRef} agregadoPor={agregadoPor} />
+      <HomeActions
+        miembros={miembrosRef}
+        editables={editables}
+        nowISO={nowISO}
+        agregadoPor={agregadoPor}
+      />
     </main>
   )
 }

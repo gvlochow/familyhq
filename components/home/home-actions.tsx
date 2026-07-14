@@ -5,39 +5,39 @@ import { PlusIcon, UserRoundIcon } from "lucide-react"
 
 import type { MiembroRef } from "@/lib/agenda/tipos"
 import { AgendaSheet } from "@/components/agenda/agenda-sheet"
+import { EstadoSheet, type MiembroEditable } from "@/components/home/estado-sheet"
 
 /**
  * Barra de acciones del Inicio (mockup): "Actualizar mi estado" + acceso rápido "+".
  * Fija sobre la tab bar, al alcance del pulgar (DESIGN.md).
  *
- * El "+" abre el sheet para crear una tarea/evento. "Actualizar mi estado" sigue
- * como SHELL (el override manual sobre tramos aún no existe): muestra un aviso
- * "pronto" en vez de fingir una acción.
+ * "Actualizar mi estado" abre el sheet del override manual (corrige la disponibilidad
+ * a mano); el "+" abre el sheet para crear una tarea/evento.
  */
 export function HomeActions({
   miembros,
+  editables,
+  nowISO,
   agregadoPor,
 }: {
   miembros: MiembroRef[]
+  editables: MiembroEditable[]
+  nowISO: string
   agregadoPor: string | null
 }) {
-  const [aviso, setAviso] = useState(false)
+  const [estado, setEstado] = useState(false)
   const [agregar, setAgregar] = useState(false)
 
   return (
     <>
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30">
         <div className="mx-auto w-full max-w-sm px-6">
-          {aviso && (
-            <p className="mb-2 rounded-lg bg-foreground/90 px-3 py-2 text-center text-xs font-medium text-background">
-              Muy pronto vas a poder actualizar tu estado a mano.
-            </p>
-          )}
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setAviso((v) => !v)}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95"
+              onClick={() => setEstado(true)}
+              disabled={editables.length === 0}
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
             >
               <UserRoundIcon className="size-5" aria-hidden />
               Actualizar mi estado
@@ -53,6 +53,10 @@ export function HomeActions({
           </div>
         </div>
       </div>
+
+      {estado && (
+        <EstadoSheet editables={editables} nowISO={nowISO} onClose={() => setEstado(false)} />
+      )}
 
       {agregar && (
         <AgendaSheet
