@@ -1,19 +1,46 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-14 (agenda en el calendario + recurrentes agrupadas en Tareas)_
+_Última actualización: 2026-07-14 (editar agenda + feed del Inicio sin commute del fijo)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**Agenda en el calendario (día combinado) + recurrentes agrupadas en Tareas: MERGEADO y PUSHEADO a `main`** (`main` @ `9c54ee0`). Todo verde (tsc + lint + 103 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). Elige el próximo frente:
+**Agenda completa (crear/editar/completar/eliminar, puntual + recurrente, en Inicio/Tareas/Calendario): MERGEADO y PUSHEADO a `main`** (`main` @ `f3cbd63`). Todo verde (tsc + lint + 103 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (el usuario lo hará al tener el MVP armado). **Se hizo un inventario completo de pendientes del MVP (2026-07-14) — ver la sección "Pendientes MVP (inventario)" más abajo.** Elige el próximo frente:
 
-- **Opciones de próximo paso** (con el usuario):
-  1. **Lista de compras** compartida (otro pilar de retención; tablas `shopping_lists`/`shopping_items` existen, sin UI).
-  2. **Historial/puntaje de tareas** (estilo Todoist): ya se guarda `completado_por` + `completado_at` (en `agenda_items` y `recurring_completions`); falta el subsistema (log + score).
-  3. **Excepciones de recurrencia** (saltar/editar una sola ocurrencia): diferido (hoy eliminar = borrar la regla completa).
-  4. **Completar/editar agenda DESDE el calendario** (hoy el detalle del día es solo lectura), y/o **toggle "Casa | Agenda"** en la grilla (diferido; el día combinado ya cubre el 80%).
-  5. **Config de Vercel** para desplegar (ver Pendientes).
+- **Recién hecho (este chat):** recurrentes agrupadas en Tareas (`fcce0b4`), agenda en el calendario día-combinado (`9c54ee0`), feed del Inicio sin el commute rutinario del fijo (`763e86e`), y **editar tareas/eventos + reglas recurrentes desde la lista** (`f3cbd63`).
+- **Grandes que faltan para el MVP (ver inventario):** **Lista de compras** (pilar de retención, sin UI); **Ajustes real** (hoy solo cierre de sesión); **PWA instalable** (sin manifest/service worker); **deploy en Vercel** (secretos del cron/cifrado). Menores/diferidos: historial/puntaje, excepciones de recurrencia, completar/editar agenda desde el calendario, invitar/vincular cuentas.
 - **Deuda menor anotada** (no urgen): endurecer el "0 filas" en `marcarCompletado`/`eliminarAgendaItem`/`eliminarActividadRecurrente` con `.select()`; cap/filtrar el commute rutinario del fijo en el feed del Inicio; `tramosDe(m)` se computa 2× por integrante en el home. Recurrencia: un override corto (<3h) NO repinta la celda del calendario (piso `resumirDia`=180min). `AgendaFila` (detalle del día, solo lectura) duplica algo del `Fila` de la tab Tareas.
 - **Estado operativo:** `main` @ `9c54ee0` (pusheado), verde (tsc + lint + 103 tests + build). Remoto con TODAS las migraciones aplicadas (incl. `availability_segments`, `availability_overrides` intra-día, `agenda_items`, y recurrencia `20260714180000`). El member variable demo SÍ tiene `availability_segments` hoy. Usuario demo: `onboarding.demo@familyhq.app` / `Demo-FamilyHQ-2026`. NO hay ICAL_ENCRYPTION_KEY/CRON_SECRET/SERVICE_ROLE en Vercel todavía.
 - **Diseño objetivo del Inicio:** `mockups/FamilyHQ_Home.png` (referencia del usuario). Ver memoria `vista-familiar-direccion`.
 - **Recordatorios de tono/tooling:** sin voseo (usar "tú"); pnpm (no npm); Supabase remoto sin Docker (migraciones con `pnpm supabase db push --linked`, types con `gen types --linked`); vitest no resuelve `@/` ni `server-only` y `.env.local` es CRLF/LF mixto (ver memorias).
+
+## Pendientes MVP (inventario, 2026-07-14)
+Estado de cada pilar del MVP (CLAUDE.md: PWA de organización familiar; diferenciador de entrada = rol de tripulación → calendario legible; uso diario = actividades recurrentes + lista de compras; dos segmentos: irregular/entrada y normal/retención).
+
+**LISTO (construido y verificado):**
+- ✅ **Onboarding** completo (crear hogar, tipo de horario, config variable/fijo, agregar integrantes, navegación atrás).
+- ✅ **Ingesta + clasificación del rol variable** (cron, cifrado AES-GCM, filtrado iFlight, golden de julio). Corre en el runtime de la app; **falta solo la config de infra en Vercel para producción**.
+- ✅ **Disponibilidad** a tramos intra-día (variable + fijo), **Inicio** "¿Cómo está la casa?", **Calendario** familiar con detalle de día, **"Actualizar mi estado"** (override manual).
+- ✅ **Agenda**: tareas/eventos puntuales + **recurrencia** (dia_mes/dias_semana) con completado por-ocurrencia; crear/editar/completar/eliminar; en Inicio (feed), Tareas (lista, recurrentes agrupadas) y Calendario (día combinado).
+- ✅ **Auth** (email+contraseña, Google OAuth), **nav shell**, **RLS** multi-tenant verificada.
+
+**FALTA para el MVP (grande):**
+- [ ] **Lista de compras compartida** — pilar de retención del MVP. Tablas `shopping_lists`/`shopping_items` existen con RLS; **cero UI/lógica**. Es la feature grande que falta del "uso diario".
+- [ ] **Ajustes real** — hoy solo cierre de sesión. Falta: editar hogar (nombre), gestionar integrantes (editar/quitar), reconectar/editar el rol, editar horario fijo, buffers de salida/llegada. Varias piezas ya existen en el onboarding y se reusarían.
+- [ ] **PWA instalable** — el producto es "PWA" pero NO hay `manifest` ni service worker (no se instala en el teléfono, sin ícono en pantalla de inicio, sin offline básico). Es parte de la promesa del producto.
+- [ ] **Deploy en Vercel** — agregar `ICAL_ENCRYPTION_KEY`, `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`; verificar el cron en prod. Sin esto no hay producto vivo para el piloto.
+
+**FALTA (menor / puede quedar post-MVP según alcance del piloto):**
+- [ ] **Invitar/vincular cuentas** — hoy solo perfiles administrados (`user_id=null`). Falta invitar por email + vincular cuando la persona se registra (trigger ya blindado). La copy del onboarding ya lo promete.
+- [ ] **Historial/puntaje de tareas** (estilo Todoist) — ya se guarda `completado_por`/`completado_at` en `agenda_items` y `recurring_completions`; falta el subsistema (log + score). Retención, no core.
+- [ ] **Excepciones de recurrencia** — saltar/editar UNA ocurrencia (hoy editar = toda la serie; eliminar = toda la regla).
+- [ ] **Completar/editar agenda desde el Calendario** (el detalle del día es solo lectura) y **toggle "Casa | Agenda"** en la grilla.
+- [ ] **Endurecer connectCalendar contra SSRF** antes de abrir a más usuarios (exige https pero sigue redirects; validar host/IP, bloquear rangos internos).
+- [ ] **Robustez del cron/overrides**: hash de evidencia por-día (hoy un día FUERA usa el hash de todo el bloque); endurecer el embed `members(buffer_llegada_min)`.
+- [ ] **Deuda de UI menor**: `.select()` en `eliminarAgendaItem`/`eliminarActividadRecurrente`; `<OnboardingHeader>` (5 forms repiten header); `AgendaFila` (detalle del día) duplica algo del `Fila` de la tab.
+- [ ] (Parado) Analítica PostHog — retomar en el piloto.
+- [ ] (Post-MVP) Billing/Stripe — el esquema tiene campos de plan, sin billing.
+
+## Hito: editar agenda + feed del Inicio sin commute del fijo (2026-07-14, merges `763e86e`/`f3cbd63`)
+- **Feed del Inicio sin el commute rutinario del fijo** (`763e86e`): un horario fijo (9-18 a diario) inundaba "Próximo en la casa" con "sale/llega" — el forecast ahora toma la disponibilidad SOLO de quienes no son `tipo_horario='fijo'` (su estado actual ya se ve en la tarjeta). Sonda: 8→0 entradas. (Un override sobre un fijo tampoco aparece en el feed por ahora; refinamiento anotado.)
+- **Editar tareas/eventos + reglas recurrentes desde la lista** (`f3cbd63`): tocar el cuerpo de una fila en Tareas abre la hoja en modo EDICIÓN prellenada. Server Actions `editarAgendaItem` / `editarActividadRecurrente` (validan como crear, `.select().maybeSingle()` para el 0-filas). En edición el tipo puntual/recurrente queda fijo (sin toggle "Se repite") y avisa "editas toda la serie". `AgendaItem` lleva la regla cruda + `recurrenteFechaFin` para prellenar. Sonda RLS en vivo: edita un puntual y una regla (cambia patrón/título/término).
 
 ## Hito: agenda en el calendario + recurrentes agrupadas (2026-07-14, merges `fcce0b4`/`9c54ee0`)
 - **Decisión de producto (con el usuario):** las tareas/eventos entran al calendario como **capa secundaria de UN solo calendario**, NO un segundo calendario ni un toggle (por ahora). Se descartó "dos calendarios separados" (duplica navegación, parte el modelo mental).
