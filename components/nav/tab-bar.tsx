@@ -7,19 +7,21 @@ import {
   HouseIcon,
   ListTodoIcon,
   SettingsIcon,
+  ShoppingCartIcon,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 /**
  * Barra de navegación inferior de la app autenticada (DESIGN.md: Inicio,
- * Calendario, Tareas, Ajustes; acciones al alcance del pulgar). Fija abajo,
- * ancho de la app (max-w-sm) centrado. El item activo se resuelve por la ruta.
+ * Calendario, Tareas, Compras, Ajustes; acciones al alcance del pulgar). Fija
+ * abajo, ancho de la app (max-w-sm) centrado. El item activo se resuelve por la ruta.
  */
 const TABS = [
   { href: "/", label: "Inicio", Icono: HouseIcon },
   { href: "/calendario", label: "Calendario", Icono: CalendarDaysIcon },
   { href: "/tareas", label: "Tareas", Icono: ListTodoIcon },
+  { href: "/compras", label: "Compras", Icono: ShoppingCartIcon },
   { href: "/ajustes", label: "Ajustes", Icono: SettingsIcon },
 ] as const
 
