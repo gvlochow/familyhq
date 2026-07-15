@@ -16,3 +16,12 @@ export function esRol(valor: unknown): valor is Rol {
     typeof valor === "string" && (ROLES as readonly string[]).includes(valor)
   )
 }
+
+/**
+ * Etiqueta visible de cada rol (fuente única). El valor interno del enum sigue
+ * siendo 'sostenedor', pero se muestra como "Responsable" (menos connotación escolar).
+ */
+export const ROL_LABEL: Record<Rol, string> = {
+  sostenedor: "Responsable",
+  integrante: "Integrante",
+}

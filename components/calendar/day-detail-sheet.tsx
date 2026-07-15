@@ -30,11 +30,15 @@ export function DayDetailSheet({
   fecha,
   miembros,
   agenda,
+  onToggle,
+  onEditar,
   onClose,
 }: {
   fecha: string
   miembros: MiembroCalendario[]
   agenda: AgendaItem[]
+  onToggle: (i: AgendaItem) => void
+  onEditar: (i: AgendaItem) => void
   onClose: () => void
 }) {
   useEffect(() => {
@@ -126,7 +130,13 @@ export function DayDetailSheet({
             </h3>
             <ul className="flex flex-col">
               {agenda.map((item, i) => (
-                <AgendaFila key={item.id} item={item} borde={i > 0} />
+                <AgendaFila
+                  key={item.id}
+                  item={item}
+                  borde={i > 0}
+                  onToggle={onToggle}
+                  onEditar={onEditar}
+                />
               ))}
             </ul>
           </div>
@@ -136,24 +146,45 @@ export function DayDetailSheet({
   )
 }
 
-/** Una tarea/evento del día, solo lectura (completar/editar viven en Tareas/Inicio). */
-function AgendaFila({ item, borde }: { item: AgendaItem; borde: boolean }) {
+/** Una tarea/evento del día: la tarea se marca/desmarca; tocar el cuerpo edita. */
+function AgendaFila({
+  item,
+  borde,
+  onToggle,
+  onEditar,
+}: {
+  item: AgendaItem
+  borde: boolean
+  onToggle: (i: AgendaItem) => void
+  onEditar: (i: AgendaItem) => void
+}) {
   const esTarea = item.tipo === "tarea"
-  const Icono = esTarea ? (item.completado ? CircleCheckIcon : CircleIcon) : CalendarIcon
   return (
     <li className={cn("flex items-center gap-3 py-2", borde && "border-t border-border/60")}>
-      <span
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center",
-          esTarea && item.completado ? "text-secondary-foreground" : "text-muted-foreground",
-          !esTarea && "text-primary",
-        )}
-        aria-hidden
-      >
-        <Icono className={esTarea ? "size-5" : "size-4"} />
-      </span>
+      {esTarea ? (
+        <button
+          type="button"
+          onClick={() => onToggle(item)}
+          aria-label={item.completado ? "Marcar pendiente" : "Marcar hecha"}
+          className={cn(
+            "shrink-0",
+            item.completado ? "text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {item.completado ? <CircleCheckIcon className="size-5" /> : <CircleIcon className="size-5" />}
+        </button>
+      ) : (
+        <span className="flex size-5 shrink-0 items-center justify-center text-primary" aria-hidden>
+          <CalendarIcon className="size-4" />
+        </span>
+      )}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={() => onEditar(item)}
+        aria-label={`Editar ${item.titulo}`}
+        className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+      >
         <span
           className={cn(
             "flex items-center gap-1.5 text-sm font-medium text-foreground",
@@ -171,7 +202,7 @@ function AgendaFila({ item, borde }: { item: AgendaItem; borde: boolean }) {
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>
           )}
         </span>
-      </div>
+      </button>
 
       <AsignadosChips asignados={item.asignados} />
     </li>

@@ -27,9 +27,10 @@ export default async function CalendarioPage({
   const { mes } = await searchParams
   const supabase = await createClient()
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("id, display_name, user_id, tipo_horario")
+  const [{ data: { user } }, { data: members }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("members").select("id, display_name, user_id, tipo_horario"),
+  ])
   const integrantes = members ?? []
 
   // Mes base: ?mes=yyyy-MM válido, o el mes actual.
@@ -99,6 +100,9 @@ export default async function CalendarioPage({
   const mesNext = base.plus({ months: 1 }).toFormat("yyyy-MM")
   const href = (m: string) => `/calendario?mes=${m}`
 
+  const yo = integrantes.find((m) => m.user_id === user?.id)
+  const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
+
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-5 px-6 pt-8 pb-28">
       <header className="flex flex-col gap-4">
@@ -132,7 +136,13 @@ export default async function CalendarioPage({
       </header>
 
       {integrantes.length > 0 ? (
-        <CalendarView grilla={grilla} miembros={miembros} agendaPorDia={agendaPorDia} />
+        <CalendarView
+          grilla={grilla}
+          miembros={miembros}
+          agendaPorDia={agendaPorDia}
+          miembrosRef={miembrosRef}
+          agregadoPor={agregadoPor}
+        />
       ) : (
         <p className="text-sm text-muted-foreground">
           Todavía no hay integrantes en el hogar.

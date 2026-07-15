@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
 import { esRol } from "@/lib/members/rol"
+import { esTipoHorario } from "@/lib/members/tipo-horario"
 
 type Resultado = { error?: string }
 
@@ -64,16 +65,17 @@ export async function renombrarHogar(nombre: string): Promise<Resultado> {
  */
 export async function editarIntegrante(
   memberId: string,
-  input: { nombre: string; rol: string },
+  input: { nombre: string; rol: string; tipoHorario: string },
 ): Promise<Resultado> {
   const supabase = await createClient()
   const nombre = input.nombre.trim()
   if (!nombre) return { error: "Escribe el nombre." }
   if (!esRol(input.rol)) return { error: "Elige un rol válido." }
+  if (!esTipoHorario(input.tipoHorario)) return { error: "Elige un tipo de horario válido." }
 
   const { data, error } = await supabase
     .from("members")
-    .update({ display_name: nombre, rol: input.rol })
+    .update({ display_name: nombre, rol: input.rol, tipo_horario: input.tipoHorario })
     .eq("id", memberId)
     .is("user_id", null)
     .select("id")

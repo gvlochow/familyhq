@@ -10,7 +10,7 @@ import {
   completarOnboarding,
   eliminarIntegrante,
 } from "@/app/onboarding/integrantes/actions"
-import type { Rol } from "@/lib/members/rol"
+import { ROL_LABEL, type Rol } from "@/lib/members/rol"
 import type { TipoHorario } from "@/lib/members/tipo-horario"
 import { APP_HOME_ROUTE } from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,8 @@ const PASO_ACTUAL = 4
 const TOTAL_PASOS = 4
 
 const ROL_OPCIONES: { valor: Rol; label: string }[] = [
-  { valor: "sostenedor", label: "Sostenedor" },
-  { valor: "integrante", label: "Integrante" },
+  { valor: "sostenedor", label: ROL_LABEL.sostenedor },
+  { valor: "integrante", label: ROL_LABEL.integrante },
 ]
 
 const TIPO_OPCIONES: { valor: TipoHorario; label: string }[] = [
@@ -34,11 +34,7 @@ const TIPO_OPCIONES: { valor: TipoHorario; label: string }[] = [
   { valor: "variable", label: "Variable" },
 ]
 
-// Tipados por el enum: exhaustivos y con typos detectables en compilación.
-const ROL_LABEL: Record<Rol, string> = {
-  sostenedor: "Sostenedor",
-  integrante: "Integrante",
-}
+// Tipado por el enum: exhaustivo y con typos detectables en compilación.
 const TIPO_LABEL: Record<TipoHorario, string> = {
   ninguno: "Sin horario",
   fijo: "Horario fijo",

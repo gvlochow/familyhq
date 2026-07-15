@@ -6,13 +6,12 @@ import { Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, UserIcon } from "lucide-
 
 import { agregarIntegrante, eliminarIntegrante } from "@/app/onboarding/integrantes/actions"
 import { editarIntegrante } from "@/app/(app)/ajustes/actions"
-import { ROLES, type Rol } from "@/lib/members/rol"
+import { ROLES, ROL_LABEL, type Rol } from "@/lib/members/rol"
 import { TIPOS_HORARIO, type TipoHorario } from "@/lib/members/tipo-horario"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-const ROL_LABEL: Record<Rol, string> = { sostenedor: "Sostenedor", integrante: "Integrante" }
 const TIPO_LABEL: Record<TipoHorario, string> = {
   ninguno: "Sin horario",
   fijo: "Horario fijo",
@@ -217,6 +216,7 @@ function EditarIntegrante({
 }) {
   const [nombre, setNombre] = useState(integrante.nombre)
   const [rol, setRol] = useState<Rol>((integrante.rol as Rol) ?? "integrante")
+  const [tipo, setTipo] = useState<TipoHorario>((integrante.tipo as TipoHorario) ?? "ninguno")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -224,7 +224,7 @@ function EditarIntegrante({
     e.preventDefault()
     setError(null)
     setPending(true)
-    const res = await editarIntegrante(integrante.id, { nombre, rol })
+    const res = await editarIntegrante(integrante.id, { nombre, rol, tipoHorario: tipo })
     setPending(false)
     if (res.error) {
       setError(res.error)
@@ -240,6 +240,7 @@ function EditarIntegrante({
     >
       <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoFocus disabled={pending} />
       <Pills titulo="Rol" opciones={ROLES} label={(r) => ROL_LABEL[r as Rol]} valor={rol} onChange={(v) => setRol(v as Rol)} />
+      <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending || !nombre.trim()} className="flex-1">
           {pending ? <Loader2Icon className="size-4 animate-spin" /> : "Guardar"}
