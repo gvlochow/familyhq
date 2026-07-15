@@ -3,8 +3,28 @@ import type {
   MiembroDia,
 } from "@/lib/availability/mes-familia"
 import type { AgendaItem } from "@/lib/agenda/tipos"
+import { COLOR_CATEGORIA_DEFECTO, hexCategoria } from "@/lib/agenda/categorias"
 import { LETRAS_DIA } from "@/lib/availability/dias"
 import { cn } from "@/lib/utils"
+
+/** Máximo de puntos de categoría en una celda (superpuestos para no llenar el box). */
+const MAX_PUNTOS = 4
+
+/**
+ * Colores (hex) de las categorías presentes en la agenda de un día: uno por categoría
+ * distinta, más el gris neutro si hay ítems sin categoría. Acotado a MAX_PUNTOS.
+ */
+function coloresAgenda(items: AgendaItem[]): string[] {
+  const claves = new Set<string>()
+  let hayNeutro = false
+  for (const it of items) {
+    if (it.categoria) claves.add(it.categoria.color)
+    else hayNeutro = true
+  }
+  const cols = [...claves].sort().map(hexCategoria)
+  if (hayNeutro) cols.push(hexCategoria(COLOR_CATEGORIA_DEFECTO))
+  return cols.slice(0, MAX_PUNTOS)
+}
 
 /**
  * Grilla mensual FAMILIAR: una celda por día que indica QUIÉN está fuera (o por
@@ -61,30 +81,35 @@ export function MonthGridFamily({
           const fuera = d.miembros.filter((m) => m.estado && m.estado in INDICADOR)
           const visibles = fuera.slice(0, MAX_CHIPS)
           const resto = fuera.length - visibles.length
-          const tieneAgenda = (agendaPorDia?.[d.fecha]?.length ?? 0) > 0
+          const colores = coloresAgenda(agendaPorDia?.[d.fecha] ?? [])
 
           return (
             <button
               key={d.fecha}
               type="button"
               onClick={() => onDiaClick?.(d.fecha)}
-              aria-label={tieneAgenda ? `Ver el ${d.dia} (con agenda)` : `Ver el ${d.dia}`}
+              aria-label={colores.length > 0 ? `Ver el ${d.dia} (con agenda)` : `Ver el ${d.dia}`}
               className={cn(
                 "flex aspect-square flex-col gap-0.5 rounded-md p-1 text-left transition-colors hover:bg-muted/60",
                 d.esHoy ? "ring-2 ring-primary/50" : "ring-1 ring-border/60",
               )}
             >
-              <span className="flex items-center justify-between">
+              <span className="flex items-center gap-0.5">
+                {colores.length > 0 && (
+                  <span className="flex -space-x-1">
+                    {colores.map((hex, i) => (
+                      <span
+                        key={i}
+                        className="size-2 rounded-full ring-1 ring-background"
+                        style={{ backgroundColor: hex }}
+                        aria-hidden
+                      />
+                    ))}
+                  </span>
+                )}
                 <span
                   className={cn(
-                    "size-1.5 rounded-full bg-foreground/45",
-                    !tieneAgenda && "invisible",
-                  )}
-                  aria-hidden
-                />
-                <span
-                  className={cn(
-                    "text-xs tabular-nums",
+                    "ml-auto text-xs tabular-nums",
                     d.esHoy ? "font-semibold text-primary" : "text-foreground",
                   )}
                 >
@@ -143,8 +168,11 @@ export function MonthGridFamily({
             <span className="text-xs text-muted-foreground">En casa (sin marca)</span>
           </li>
           <li className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-foreground/45" aria-hidden />
-            <span className="text-xs text-muted-foreground">Con agenda</span>
+            <span className="flex -space-x-1" aria-hidden>
+              <span className="size-2 rounded-full ring-1 ring-background" style={{ backgroundColor: hexCategoria("ambar") }} />
+              <span className="size-2 rounded-full ring-1 ring-background" style={{ backgroundColor: hexCategoria("celeste") }} />
+            </span>
+            <span className="text-xs text-muted-foreground">Agenda (color = categoría)</span>
           </li>
         </ul>
       </div>

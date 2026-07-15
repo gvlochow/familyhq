@@ -31,7 +31,7 @@ export function HomeActions({
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30">
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30">
         <div className="mx-auto w-full max-w-sm px-6">
           <div className="flex items-center gap-2">
             <button
