@@ -41,12 +41,14 @@ export function AgendaTab({
   miembros,
   categorias,
   agregadoPor,
+  mostrarCategoria,
 }: {
   items: AgendaItem[]
   nowISO: string
   miembros: MiembroRef[]
   categorias: CategoriaRef[]
   agregadoPor: string | null
+  mostrarCategoria: boolean
 }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
@@ -100,7 +102,7 @@ export function AgendaTab({
       ) : (
         <ul className={cn("flex flex-col", pendiente && "opacity-60")}>
           {pendientes.map((item, i) => (
-            <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
+            <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} mostrarCategoria={mostrarCategoria} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
           ))}
         </ul>
       )}
@@ -112,7 +114,7 @@ export function AgendaTab({
           </h2>
           <ul className={cn("flex flex-col", pendiente && "opacity-60")}>
             {hechas.map((item, i) => (
-              <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
+              <Fila key={item.id} item={item} nowISO={nowISO} borde={i > 0} mostrarCategoria={mostrarCategoria} onToggle={toggle} onEditar={setEditando} onBorrar={borrar} />
             ))}
           </ul>
         </div>
@@ -144,6 +146,7 @@ function Fila({
   item,
   nowISO,
   borde,
+  mostrarCategoria,
   onToggle,
   onEditar,
   onBorrar,
@@ -151,6 +154,7 @@ function Fila({
   item: AgendaItem
   nowISO: string
   borde: boolean
+  mostrarCategoria: boolean
   onToggle: (i: AgendaItem) => void
   onEditar: (i: AgendaItem) => void
   onBorrar: (i: AgendaItem) => void
@@ -188,7 +192,7 @@ function Fila({
         </span>
         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
           {item.categoria && (
-            <CategoriaChip categoria={item.categoria} conNombre className="text-muted-foreground/80" />
+            <CategoriaChip categoria={item.categoria} conNombre={mostrarCategoria} className="text-muted-foreground/80" />
           )}
           {item.categoria && <span className="text-muted-foreground/50">·</span>}
           {cuando}

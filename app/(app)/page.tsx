@@ -34,7 +34,7 @@ export default async function HomePage() {
 
   const [{ data: members }, { data: hogar }] = await Promise.all([
     supabase.from("members").select("id, display_name, user_id, tipo_horario"),
-    supabase.from("households").select("name").limit(1).maybeSingle(),
+    supabase.from("households").select("name, mostrar_categoria").limit(1).maybeSingle(),
   ])
 
   const integrantes = members ?? []
@@ -108,6 +108,7 @@ export default async function HomePage() {
       nombre: m.display_name.split(" ")[0],
       inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
       esTu: m.user_id === user?.id,
+      esVariable: m.tipo_horario === "variable",
     }))
 
   // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
@@ -185,7 +186,14 @@ export default async function HomePage() {
         </section>
 
         {/* Próximo en la casa (forecast): disponibilidad + agenda. */}
-        <ProximoList filas={filas} nowISO={nowISO} />
+        <ProximoList
+          filas={filas}
+          nowISO={nowISO}
+          mostrarCategoria={hogar?.mostrar_categoria ?? true}
+          miembros={miembrosRef}
+          categorias={[...categorias.values()]}
+          agregadoPor={agregadoPor}
+        />
       </div>
 
       <HomeActions

@@ -161,7 +161,7 @@ export function MonthGridFamily({
           </li>
           <li className="flex items-center gap-1.5">
             <span className="size-3 rounded-sm bg-accent" aria-hidden />
-            <span className="text-xs text-muted-foreground">Por confirmar</span>
+            <span className="text-xs text-muted-foreground">Blanco (hasta 21:00)</span>
           </li>
           <li className="flex items-center gap-1.5">
             <span className="size-3 rounded-sm bg-secondary/60" aria-hidden />

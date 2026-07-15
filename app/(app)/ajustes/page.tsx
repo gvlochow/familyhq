@@ -10,6 +10,7 @@ import {
 } from "@/components/ajustes/integrantes-section"
 import { HorarioSection } from "@/components/ajustes/horario-section"
 import { CategoriasSection } from "@/components/ajustes/categorias-section"
+import { AgendaPrefsSection } from "@/components/ajustes/agenda-prefs-section"
 import { cargarCategorias } from "../_lib/categorias"
 import { signOut } from "./actions"
 
@@ -26,7 +27,7 @@ export default async function AjustesPage() {
   } = await supabase.auth.getUser()
 
   const [{ data: hogar }, { data: members }, categorias] = await Promise.all([
-    supabase.from("households").select("name").limit(1).maybeSingle(),
+    supabase.from("households").select("name, mostrar_categoria").limit(1).maybeSingle(),
     supabase.from("members").select("id, display_name, user_id, rol, tipo_horario"),
     cargarCategorias(supabase),
   ])
@@ -80,6 +81,8 @@ export default async function AjustesPage() {
       )}
 
       <CategoriasSection categorias={[...categorias.values()]} />
+
+      <AgendaPrefsSection mostrarCategoria={hogar?.mostrar_categoria ?? true} />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">Sesión</h2>

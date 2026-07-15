@@ -28,9 +28,10 @@ export default async function CalendarioPage({
   const { mes } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: { user } }, { data: members }] = await Promise.all([
+  const [{ data: { user } }, { data: members }, { data: hogar }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("members").select("id, display_name, user_id, tipo_horario"),
+    supabase.from("households").select("mostrar_categoria").limit(1).maybeSingle(),
   ])
   const integrantes = members ?? []
 
@@ -145,6 +146,7 @@ export default async function CalendarioPage({
           miembrosRef={miembrosRef}
           categorias={[...categorias.values()]}
           agregadoPor={agregadoPor}
+          mostrarCategoria={hogar?.mostrar_categoria ?? true}
         />
       ) : (
         <p className="text-sm text-muted-foreground">

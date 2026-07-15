@@ -31,6 +31,7 @@ export function DayDetailSheet({
   fecha,
   miembros,
   agenda,
+  mostrarCategoria,
   onToggle,
   onEditar,
   onClose,
@@ -38,6 +39,7 @@ export function DayDetailSheet({
   fecha: string
   miembros: MiembroCalendario[]
   agenda: AgendaItem[]
+  mostrarCategoria: boolean
   onToggle: (i: AgendaItem) => void
   onEditar: (i: AgendaItem) => void
   onClose: () => void
@@ -135,6 +137,7 @@ export function DayDetailSheet({
                   key={item.id}
                   item={item}
                   borde={i > 0}
+                  mostrarCategoria={mostrarCategoria}
                   onToggle={onToggle}
                   onEditar={onEditar}
                 />
@@ -151,11 +154,13 @@ export function DayDetailSheet({
 function AgendaFila({
   item,
   borde,
+  mostrarCategoria,
   onToggle,
   onEditar,
 }: {
   item: AgendaItem
   borde: boolean
+  mostrarCategoria: boolean
   onToggle: (i: AgendaItem) => void
   onEditar: (i: AgendaItem) => void
 }) {
@@ -200,7 +205,7 @@ function AgendaFila({
         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
           {item.categoria && (
             <>
-              <CategoriaChip categoria={item.categoria} conNombre className="text-muted-foreground/80" />
+              <CategoriaChip categoria={item.categoria} conNombre={mostrarCategoria} className="text-muted-foreground/80" />
               <span className="text-muted-foreground/50">·</span>
             </>
           )}

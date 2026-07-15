@@ -48,7 +48,8 @@ export const ESTADO_META: Record<EstadoDisponibilidad, EstadoMeta> = {
     chipClass: "bg-secondary/60 text-secondary-foreground ring-1 ring-primary/20",
   },
   por_confirmar: {
-    label: "Por confirmar",
+    // "Blanco" (día blanco de tripulación): llamable hasta las 21:00. Se mantiene ámbar.
+    label: "Blanco",
     Icono: HourglassIcon,
     cardClass: "bg-accent/20 text-foreground",
     iconWrapClass: "bg-accent/30 text-accent-foreground",

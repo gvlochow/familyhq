@@ -282,6 +282,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          mostrar_categoria: boolean
           name: string
           onboarding_completed: boolean
           plan: string
@@ -291,6 +292,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          mostrar_categoria?: boolean
           name: string
           onboarding_completed?: boolean
           plan?: string
@@ -300,6 +302,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          mostrar_categoria?: boolean
           name?: string
           onboarding_completed?: boolean
           plan?: string
