@@ -59,6 +59,30 @@ export async function renombrarHogar(nombre: string): Promise<Resultado> {
 }
 
 /**
+ * Preferencia del hogar: mostrar u ocultar el NOMBRE de la categoría junto al título
+ * en la agenda (Inicio/Tareas/Calendario). El punto de color se muestra igual.
+ */
+export async function actualizarMostrarCategoria(valor: boolean): Promise<Resultado> {
+  const supabase = await createClient()
+  const householdId = await hogarActual(supabase)
+  if (!householdId) return { error: "No perteneces a un hogar." }
+
+  const { data, error } = await supabase
+    .from("households")
+    .update({ mostrar_categoria: valor })
+    .eq("id", householdId)
+    .select("id")
+    .maybeSingle()
+  if (error || !data) return { error: "No se pudo guardar. Intenta de nuevo." }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/")
+  revalidatePath("/tareas")
+  revalidatePath("/calendario")
+  return {}
+}
+
+/**
  * Edita nombre/rol de un integrante. Solo perfiles ADMINISTRADOS (user_id null):
  * un integrante con cuenta propia no se edita desde acá (su nombre viene de su
  * cuenta). RLS (members_update) acota al hogar; el `.is('user_id', null)` restringe

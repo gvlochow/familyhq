@@ -24,6 +24,8 @@ export interface MiembroEditable {
   nombre: string
   inicial: string
   esTu: boolean
+  /** Si su horario es variable (tripulación). Solo estos pueden fijar "Standby". */
+  esVariable: boolean
 }
 
 /**
@@ -58,6 +60,17 @@ export function EstadoSheet({
   const seleccionado = editables.find((m) => m.id === memberId)
   const hastaTexto = useMemo(() => describirFin(preset, nowISO), [preset, nowISO])
 
+  // "Standby en casa" es un concepto de tripulación (rol variable): para un horario
+  // fijo no se ofrece. El resto de estados se pueden fijar para cualquiera.
+  const estadosDisponibles = ESTADOS_OVERRIDE.filter(
+    (e) => e !== "standby_casa" || seleccionado?.esVariable,
+  )
+  // Estado efectivo: si el elegido dejó de estar disponible al cambiar de integrante
+  // (standby en un fijo), cae a "en casa". Derivado en el render, sin efecto.
+  const estadoEfectivo: EstadoOverride = (estadosDisponibles as readonly string[]).includes(estado)
+    ? estado
+    : "en_casa"
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
     document.addEventListener("keydown", onKey)
@@ -70,7 +83,7 @@ export function EstadoSheet({
     setGuardando(true)
     setError(null)
     const { inicioUtc, finUtc } = intervaloDesde(preset, nowISO)
-    const res = await actualizarMiEstado({ memberId, estado, inicioUtc, finUtc })
+    const res = await actualizarMiEstado({ memberId, estado: estadoEfectivo, inicioUtc, finUtc })
     setGuardando(false)
     if (res.error) {
       setError(res.error)
@@ -165,10 +178,10 @@ export function EstadoSheet({
         {/* Estado a fijar. */}
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium text-foreground">Estado</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {ESTADOS_OVERRIDE.map((e) => {
+          <div className={cn("grid gap-2", estadosDisponibles.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
+            {estadosDisponibles.map((e) => {
               const meta = ESTADO_META[e]
-              const activo = estado === e
+              const activo = estadoEfectivo === e
               const Icono = meta.Icono
               return (
                 <button
@@ -221,7 +234,7 @@ export function EstadoSheet({
           <p className="text-sm text-muted-foreground">
             {seleccionado.esTu ? "Estarás" : `${seleccionado.nombre} estará`}{" "}
             <span className="font-medium text-foreground">
-              {ESTADO_META[estado].label.toLowerCase()}
+              {ESTADO_META[estadoEfectivo].label.toLowerCase()}
             </span>{" "}
             {hastaTexto}.
           </p>

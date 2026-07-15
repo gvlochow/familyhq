@@ -49,7 +49,7 @@ const META: Record<EstadoDisponibilidad, Meta> = {
     pill: "bg-secondary/50 text-secondary-foreground ring-1 ring-primary/20",
   },
   por_confirmar: {
-    label: "Por confirmar",
+    label: "Blanco",
     Icono: HourglassIcon,
     borde: "border-l-accent",
     avatar: "bg-accent/25 text-accent-foreground",
@@ -79,7 +79,7 @@ function subtitulo(
     case "standby_casa":
       return "En casa, pero llamable"
     case "por_confirmar":
-      return "Por confirmar en el rol"
+      return "Blanco · llamable hasta las 21:00"
     case "en_casa":
       return "En casa"
   }

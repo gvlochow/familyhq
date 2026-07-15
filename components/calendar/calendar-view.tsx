@@ -31,6 +31,7 @@ export function CalendarView({
   miembrosRef,
   categorias,
   agregadoPor,
+  mostrarCategoria,
 }: {
   grilla: GrillaMesFamilia
   miembros: MiembroCalendario[]
@@ -38,6 +39,7 @@ export function CalendarView({
   miembrosRef: MiembroRef[]
   categorias: CategoriaRef[]
   agregadoPor: string | null
+  mostrarCategoria: boolean
 }) {
   const router = useRouter()
   const [dia, setDia] = useState<string | null>(null)
@@ -89,6 +91,7 @@ export function CalendarView({
           fecha={dia}
           miembros={miembros}
           agenda={agendaPorDia[dia] ?? []}
+          mostrarCategoria={mostrarCategoria}
           onToggle={toggle}
           onEditar={editar}
           onClose={() => setDia(null)}

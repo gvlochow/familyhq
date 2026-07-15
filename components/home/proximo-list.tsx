@@ -1,18 +1,35 @@
 import { CalendarIcon, HouseIcon, PlaneIcon } from "lucide-react"
 
 import type { FilaFeed } from "@/lib/agenda/feed"
+import type { MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { etiquetaCuando } from "@/lib/availability/formato"
 import { AsignadosChips } from "@/components/agenda/asignados-chips"
-import { CategoriaChip } from "@/components/agenda/categoria-chip"
 import { CompletarTarea } from "@/components/agenda/completar-tarea"
+import { ProximoAgendaItem } from "@/components/home/proximo-agenda-item"
 import { cn } from "@/lib/utils"
 
 /**
  * Feed "Próximo en la casa": cambios de disponibilidad + tareas/eventos de la
  * agenda, ya mezclados y ordenados por cuándo (construirFeed). Server component.
- * Las tareas se pueden completar de un click (CompletarTarea, cliente).
+ * Las tareas se pueden completar de un click (CompletarTarea) y los ítems de agenda
+ * se pueden abrir para ver el detalle (ProximoAgendaItem) — ambos cliente.
  */
-export function ProximoList({ filas, nowISO }: { filas: FilaFeed[]; nowISO: string }) {
+export function ProximoList({
+  filas,
+  nowISO,
+  mostrarCategoria,
+  miembros,
+  categorias,
+  agregadoPor,
+}: {
+  filas: FilaFeed[]
+  nowISO: string
+  mostrarCategoria: boolean
+  miembros: MiembroRef[]
+  categorias: CategoriaRef[]
+  agregadoPor: string | null
+}) {
   return (
     <section className="flex flex-col gap-1">
       <h2 className="px-1 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -39,16 +56,19 @@ export function ProximoList({ filas, nowISO }: { filas: FilaFeed[]; nowISO: stri
                 <Icono fila={f} />
               )}
 
-              <span className="flex flex-1 items-center gap-1.5 truncate text-sm text-foreground">
-                <span className="truncate font-medium">{titulo(f)}</span>
-                {f.clase === "agenda" && f.item.categoria && (
-                  <CategoriaChip
-                    categoria={f.item.categoria}
-                    conNombre
-                    className="shrink-0 text-xs italic text-muted-foreground/80"
-                  />
-                )}
-              </span>
+              {f.clase === "agenda" ? (
+                <ProximoAgendaItem
+                  item={f.item}
+                  mostrarCategoria={mostrarCategoria}
+                  miembros={miembros}
+                  categorias={categorias}
+                  agregadoPor={agregadoPor}
+                />
+              ) : (
+                <span className="flex flex-1 items-center gap-1.5 truncate text-sm text-foreground">
+                  <span className="truncate font-medium">{titulo(f)}</span>
+                </span>
+              )}
 
               {f.clase === "agenda" && <AsignadosChips asignados={f.item.asignados} />}
 

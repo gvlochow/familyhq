@@ -22,7 +22,7 @@ export default async function TareasPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: members }, { data: agendaRaw }, categorias] = await Promise.all([
+  const [{ data: members }, { data: agendaRaw }, categorias, { data: hogar }] = await Promise.all([
     supabase.from("members").select("id, display_name, user_id"),
     supabase
       .from("agenda_items")
@@ -30,6 +30,7 @@ export default async function TareasPage() {
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true, nullsFirst: true }),
     cargarCategorias(supabase),
+    supabase.from("households").select("mostrar_categoria").limit(1).maybeSingle(),
   ])
 
   const integrantes = members ?? []
@@ -80,6 +81,7 @@ export default async function TareasPage() {
         miembros={miembrosRef}
         categorias={[...categorias.values()]}
         agregadoPor={agregadoPor}
+        mostrarCategoria={hogar?.mostrar_categoria ?? true}
       />
     </main>
   )
