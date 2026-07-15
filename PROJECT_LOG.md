@@ -1,8 +1,10 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-15 (arreglos de agenda/ajustes + categorías de la agenda)_
+_Última actualización: 2026-07-15 (categorías + arreglos de UI)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**Categorías de la agenda + varios arreglos MERGEADOS y PUSHEADOS a `main`** (`main` @ `bd23254`). Todo verde (tsc + lint + 110 tests + build) y verificado con sondas RLS en vivo. Vercel sigue sin configurar a propósito (las 3 env vars YA están en `.env.local`). **Inventario de pendientes del MVP más abajo.** Elige el próximo frente:
+**Categorías de la agenda + arreglos MERGEADOS y PUSHEADOS a `main`** (`main` @ `001b8d7`). Todo verde (tsc + lint + 110 tests + build) y verificado (sondas RLS en vivo donde aplica). Vercel sigue sin configurar a propósito (las 3 env vars YA están en `.env.local`). **Inventario de pendientes del MVP más abajo.** Elige el próximo frente:
+
+- **Últimos arreglos de UI (`001b8d7`):** en el feed del Inicio la categoría aparece en cursiva junto al nombre del evento; los botones flotantes (Inicio+Calendario) ya no los tapa la barra inferior (offset 3.5rem→4.5rem); el calendario muestra puntos de color POR categoría en cada día (superpuestos, hasta 4). Nota futura anotada: **temas configurables** (paletas básicas + premium) — memoria `temas-configurables-idea`.
 
 - **Recién hecho (este chat):** editar tipo de horario del integrante + rol "sostenedor"→"Responsable" (etiqueta), calendario interactivo (marcar/desmarcar + tocar para editar) + botón flotante "+" (`f7def97`), y **categorías de la agenda** — tabla editable por hogar con color de paleta curada, 4 sembradas (Pagos/Quehaceres/Cumpleaños/Colegio), asignar/crear al crear-editar, administrar en Ajustes, chip de color en Tareas/Inicio/Calendario (`bd23254`).
 - **Grandes que faltan para el MVP:** **Lista de compras** (pilar de retención, sin UI); **PWA instalable** (sin manifest/service worker); **deploy en Vercel** (secretos ya en `.env.local`). Menores/diferidos: buffers en Ajustes, historial/puntaje, excepciones de recurrencia, invitar/vincular cuentas, video tutorial + nota "una sola vez" en el onboarding del calendario.
