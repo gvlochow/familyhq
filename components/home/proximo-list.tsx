@@ -3,6 +3,7 @@ import { CalendarIcon, HouseIcon, PlaneIcon } from "lucide-react"
 import type { FilaFeed } from "@/lib/agenda/feed"
 import { etiquetaCuando } from "@/lib/availability/formato"
 import { AsignadosChips } from "@/components/agenda/asignados-chips"
+import { CategoriaChip } from "@/components/agenda/categoria-chip"
 import { CompletarTarea } from "@/components/agenda/completar-tarea"
 import { cn } from "@/lib/utils"
 
@@ -38,8 +39,11 @@ export function ProximoList({ filas, nowISO }: { filas: FilaFeed[]; nowISO: stri
                 <Icono fila={f} />
               )}
 
-              <span className="flex-1 truncate text-sm font-medium text-foreground">
-                {titulo(f)}
+              <span className="flex flex-1 items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                {f.clase === "agenda" && f.item.categoria && (
+                  <CategoriaChip categoria={f.item.categoria} />
+                )}
+                <span className="truncate">{titulo(f)}</span>
               </span>
 
               {f.clase === "agenda" && <AsignadosChips asignados={f.item.asignados} />}

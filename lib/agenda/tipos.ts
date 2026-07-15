@@ -5,6 +5,7 @@
  */
 
 import type { Recurrencia } from './recurrencia'
+import type { CategoriaRef } from './categorias'
 
 /** 'tarea' se completa; 'evento' ocurre a una hora. */
 export type TipoAgenda = 'tarea' | 'evento'
@@ -36,6 +37,8 @@ export interface AgendaItem {
   asignados: MiembroRef[]
   /** Nombre de quién lo agregó (registro visual). */
   agregadoPor: string | null
+  /** Categoría (nombre + color), o null si no tiene. */
+  categoria: CategoriaRef | null
   /**
    * Marcadores de recurrencia. Una ocurrencia EXPANDIDA de una regla recurrente los
    * lleva; un item puntual (fila de agenda_items) no. La UI y las acciones ramifican
@@ -63,16 +66,18 @@ export interface FilaAgendaDB {
   completado: boolean
   asignado_a: string[] | null
   created_by: string | null
+  categoria_id: string | null
 }
 
 /**
- * Mapea una fila de agenda_items a la vista, resolviendo asignados y el creador
- * contra el mapa de integrantes del hogar. Devuelve null si el tipo no es válido
- * (drift de datos). Ids que ya no resuelvan a un integrante se descartan.
+ * Mapea una fila de agenda_items a la vista, resolviendo asignados, el creador y la
+ * categoría contra los mapas del hogar. Devuelve null si el tipo no es válido (drift
+ * de datos). Ids que ya no resuelvan se descartan.
  */
 export function mapearAgendaItem(
   r: FilaAgendaDB,
   miembros: Map<string, MiembroRef>,
+  categorias: Map<string, CategoriaRef>,
 ): AgendaItem | null {
   if (!esTipoAgenda(r.tipo)) return null
   return {
@@ -86,5 +91,6 @@ export function mapearAgendaItem(
       .map((id) => miembros.get(id))
       .filter((m): m is MiembroRef => m !== undefined),
     agregadoPor: r.created_by ? (miembros.get(r.created_by)?.nombre ?? null) : null,
+    categoria: r.categoria_id ? (categorias.get(r.categoria_id) ?? null) : null,
   }
 }

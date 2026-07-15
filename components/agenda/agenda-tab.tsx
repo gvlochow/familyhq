@@ -22,6 +22,7 @@ import {
   eliminarActividadRecurrente,
 } from "@/app/(app)/tareas/actions"
 import { AsignadosChips } from "./asignados-chips"
+import { CategoriaChip } from "./categoria-chip"
 import { AgendaSheet } from "./agenda-sheet"
 import { cn } from "@/lib/utils"
 
@@ -180,7 +181,11 @@ function Fila({
           {item.recurrente && <RepeatIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label="Se repite" />}
           <span className="truncate">{item.titulo}</span>
         </span>
-        <span className="truncate text-xs text-muted-foreground">
+        <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          {item.categoria && (
+            <CategoriaChip categoria={item.categoria} conNombre className="text-muted-foreground/80" />
+          )}
+          {item.categoria && <span className="text-muted-foreground/50">·</span>}
           {cuando}
           {item.recurrente && item.recurrenciaResumen && (
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>

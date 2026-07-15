@@ -9,6 +9,7 @@
  */
 import { esTipoAgenda, type AgendaItem, type MiembroRef } from './tipos'
 import { esRecurrencia, ocurrencias, resumenRecurrencia } from './recurrencia'
+import type { CategoriaRef } from './categorias'
 
 /** Fila cruda de recurring_activities (subconjunto que se expande). */
 export interface ReglaRecurrenteDB {
@@ -21,6 +22,7 @@ export interface ReglaRecurrenteDB {
   fecha_inicio: string
   fecha_fin: string | null
   created_by: string | null
+  categoria_id: string | null
 }
 
 /**
@@ -43,6 +45,7 @@ export function expandirRecurrentes(
   desdeISO: string,
   hastaISO: string,
   miembros: Map<string, MiembroRef>,
+  categorias: Map<string, CategoriaRef>,
 ): AgendaItem[] {
   const out: AgendaItem[] = []
   for (const regla of reglas) {
@@ -53,6 +56,7 @@ export function expandirRecurrentes(
       .map((id) => miembros.get(id))
       .filter((m): m is MiembroRef => m !== undefined)
     const agregadoPor = regla.created_by ? (miembros.get(regla.created_by)?.nombre ?? null) : null
+    const categoria = regla.categoria_id ? (categorias.get(regla.categoria_id) ?? null) : null
 
     for (const fecha of ocurrencias(regla.recurrence, desdeISO, hastaISO, regla.fecha_inicio, regla.fecha_fin)) {
       out.push({
@@ -69,6 +73,7 @@ export function expandirRecurrentes(
         recurrenciaResumen: resumen,
         recurrencia: regla.recurrence,
         recurrenteFechaFin: regla.fecha_fin,
+        categoria,
       })
     }
   }

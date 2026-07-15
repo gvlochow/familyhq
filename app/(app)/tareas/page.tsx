@@ -5,6 +5,7 @@ import { TZ_LOCAL } from "@/lib/roster/types"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { proximaPorRegla } from "@/lib/agenda/recurrente"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
+import { cargarCategorias } from "../_lib/categorias"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
 
 /** Horizonte para hallar la próxima ocurrencia de cada recurrente (cubre lo mensual). */
@@ -21,13 +22,14 @@ export default async function TareasPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: members }, { data: agendaRaw }] = await Promise.all([
+  const [{ data: members }, { data: agendaRaw }, categorias] = await Promise.all([
     supabase.from("members").select("id, display_name, user_id"),
     supabase
       .from("agenda_items")
-      .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
+      .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by, categoria_id")
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true, nullsFirst: true }),
+    cargarCategorias(supabase),
   ])
 
   const integrantes = members ?? []
@@ -39,7 +41,7 @@ export default async function TareasPage() {
   const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
 
   const puntuales: AgendaItem[] = (agendaRaw ?? [])
-    .map((r) => mapearAgendaItem(r, miembrosById))
+    .map((r) => mapearAgendaItem(r, miembrosById, categorias))
     .filter((it): it is AgendaItem => it !== null)
 
   // Recurrentes COLAPSADAS a una fila por regla (su próxima ocurrencia pendiente), para
@@ -49,6 +51,7 @@ export default async function TareasPage() {
     await cargarAgendaRecurrente(
       supabase,
       miembrosById,
+      categorias,
       hoy.toISODate()!,
       hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
     ),

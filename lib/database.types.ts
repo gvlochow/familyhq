@@ -42,6 +42,7 @@ export type Database = {
       agenda_items: {
         Row: {
           asignado_a: string[]
+          categoria_id: string | null
           completado: boolean
           completado_at: string | null
           completado_por: string | null
@@ -56,6 +57,7 @@ export type Database = {
         }
         Insert: {
           asignado_a?: string[]
+          categoria_id?: string | null
           completado?: boolean
           completado_at?: string | null
           completado_por?: string | null
@@ -70,6 +72,7 @@ export type Database = {
         }
         Update: {
           asignado_a?: string[]
+          categoria_id?: string | null
           completado?: boolean
           completado_at?: string | null
           completado_por?: string | null
@@ -83,6 +86,13 @@ export type Database = {
           titulo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agenda_items_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agenda_items_completado_por_fkey"
             columns: ["completado_por"]
@@ -188,6 +198,38 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorias: {
+        Row: {
+          color: string
+          created_at: string
+          household_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          household_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          household_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
             referencedColumns: ["id"]
           },
         ]
@@ -326,6 +368,7 @@ export type Database = {
       recurring_activities: {
         Row: {
           asignado_a: string[]
+          categoria_id: string | null
           created_at: string
           created_by: string | null
           fecha_fin: string | null
@@ -341,6 +384,7 @@ export type Database = {
         }
         Insert: {
           asignado_a?: string[]
+          categoria_id?: string | null
           created_at?: string
           created_by?: string | null
           fecha_fin?: string | null
@@ -356,6 +400,7 @@ export type Database = {
         }
         Update: {
           asignado_a?: string[]
+          categoria_id?: string | null
           created_at?: string
           created_by?: string | null
           fecha_fin?: string | null
@@ -370,6 +415,13 @@ export type Database = {
           titulo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recurring_activities_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recurring_activities_created_by_fkey"
             columns: ["created_by"]

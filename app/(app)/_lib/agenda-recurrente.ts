@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { expandirRecurrentes } from "@/lib/agenda/recurrente"
 
 /**
@@ -14,12 +15,15 @@ import { expandirRecurrentes } from "@/lib/agenda/recurrente"
 export async function cargarAgendaRecurrente(
   supabase: SupabaseClient,
   miembros: Map<string, MiembroRef>,
+  categorias: Map<string, CategoriaRef>,
   desdeISO: string,
   hastaISO: string,
 ): Promise<AgendaItem[]> {
   const { data: reglas } = await supabase
     .from("recurring_activities")
-    .select("id, tipo, titulo, hora, recurrence, asignado_a, fecha_inicio, fecha_fin, created_by")
+    .select(
+      "id, tipo, titulo, hora, recurrence, asignado_a, fecha_inicio, fecha_fin, created_by, categoria_id",
+    )
 
   if (!reglas?.length) return []
 
@@ -31,5 +35,5 @@ export async function cargarAgendaRecurrente(
 
   const completadas = new Set((comps ?? []).map((c) => `${c.recurring_activity_id}:${c.fecha}`))
 
-  return expandirRecurrentes(reglas, completadas, desdeISO, hastaISO, miembros)
+  return expandirRecurrentes(reglas, completadas, desdeISO, hastaISO, miembros, categorias)
 }
