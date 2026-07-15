@@ -1,34 +1,62 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { PlusIcon } from "lucide-react"
 
 import type {
   GrillaMesFamilia,
   MiembroCalendario,
 } from "@/lib/availability/mes-familia"
-import type { AgendaItem } from "@/lib/agenda/tipos"
+import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import { marcarCompletado, marcarOcurrenciaRecurrente } from "@/app/(app)/tareas/actions"
+import { AgendaSheet } from "@/components/agenda/agenda-sheet"
 import { MonthGridFamily } from "./month-grid-family"
 import { DayDetailSheet } from "./day-detail-sheet"
 
 /**
  * Envoltorio cliente del calendario familiar: la grilla (server-friendly) + el
- * estado del día abierto y su hoja de detalle. La grilla se calcula en el server
- * y llega ya armada; acá solo se maneja la interacción de tocar un día.
+ * estado del día abierto, su detalle interactivo, la edición y el alta de agenda.
  *
- * `agendaPorDia` (tareas/eventos por fecha) alimenta el marcador de la grilla y la
- * lista del detalle del día: el calendario muestra disponibilidad Y agenda en un solo
- * lugar, sin un segundo calendario.
+ * `agendaPorDia` alimenta el marcador de la grilla y la lista del detalle. Desde el
+ * detalle se puede marcar/desmarcar una tarea y tocar para editar; un botón flotante
+ * "+" agrega tarea/evento — el calendario muestra y opera disponibilidad + agenda en
+ * un solo lugar.
  */
 export function CalendarView({
   grilla,
   miembros,
   agendaPorDia,
+  miembrosRef,
+  agregadoPor,
 }: {
   grilla: GrillaMesFamilia
   miembros: MiembroCalendario[]
   agendaPorDia: Record<string, AgendaItem[]>
+  miembrosRef: MiembroRef[]
+  agregadoPor: string | null
 }) {
+  const router = useRouter()
   const [dia, setDia] = useState<string | null>(null)
+  const [agregar, setAgregar] = useState(false)
+  const [editando, setEditando] = useState<AgendaItem | null>(null)
+  const [, startTransition] = useTransition()
+
+  function toggle(item: AgendaItem) {
+    startTransition(async () => {
+      if (item.recurrente && item.recurrenteId) {
+        await marcarOcurrenciaRecurrente(item.recurrenteId, item.fecha, !item.completado)
+      } else {
+        await marcarCompletado(item.id, !item.completado)
+      }
+      router.refresh()
+    })
+  }
+
+  function editar(item: AgendaItem) {
+    setDia(null) // cierra el detalle para abrir la edición encima sin apilar hojas
+    setEditando(item)
+  }
 
   return (
     <>
@@ -38,12 +66,46 @@ export function CalendarView({
         agendaPorDia={agendaPorDia}
         onDiaClick={setDia}
       />
+
+      {/* Botón flotante para agregar tarea/evento. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30">
+        <div className="mx-auto flex w-full max-w-sm justify-end px-6">
+          <button
+            type="button"
+            onClick={() => setAgregar(true)}
+            aria-label="Agregar tarea o evento"
+            className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-opacity hover:opacity-95"
+          >
+            <PlusIcon className="size-6" aria-hidden />
+          </button>
+        </div>
+      </div>
+
       {dia && (
         <DayDetailSheet
           fecha={dia}
           miembros={miembros}
           agenda={agendaPorDia[dia] ?? []}
+          onToggle={toggle}
+          onEditar={editar}
           onClose={() => setDia(null)}
+        />
+      )}
+
+      {agregar && (
+        <AgendaSheet
+          miembros={miembrosRef}
+          agregadoPor={agregadoPor}
+          onClose={() => setAgregar(false)}
+        />
+      )}
+
+      {editando && (
+        <AgendaSheet
+          miembros={miembrosRef}
+          agregadoPor={agregadoPor}
+          editar={editando}
+          onClose={() => setEditando(null)}
         />
       )}
     </>
