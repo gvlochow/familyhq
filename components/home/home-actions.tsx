@@ -4,6 +4,7 @@ import { useState } from "react"
 import { PlusIcon, UserRoundIcon } from "lucide-react"
 
 import type { MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { AgendaSheet } from "@/components/agenda/agenda-sheet"
 import { EstadoSheet, type MiembroEditable } from "@/components/home/estado-sheet"
 
@@ -16,10 +17,12 @@ import { EstadoSheet, type MiembroEditable } from "@/components/home/estado-shee
  */
 export function HomeActions({
   miembros,
+  categorias,
   editables,
   agregadoPor,
 }: {
   miembros: MiembroRef[]
+  categorias: CategoriaRef[]
   editables: MiembroEditable[]
   agregadoPor: string | null
 }) {
@@ -57,6 +60,7 @@ export function HomeActions({
       {agregar && (
         <AgendaSheet
           miembros={miembros}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           onClose={() => setAgregar(false)}
         />

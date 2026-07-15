@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { esRol } from "@/lib/members/rol"
 import { esTipoHorario } from "@/lib/members/tipo-horario"
+import { esColorCategoria } from "@/lib/agenda/categorias"
 
 type Resultado = { error?: string }
 
@@ -85,5 +86,49 @@ export async function editarIntegrante(
 
   revalidatePath("/ajustes")
   revalidatePath("/")
+  return {}
+}
+
+/** Edita el nombre/color de una categoría. RLS acota al hogar. */
+export async function editarCategoria(
+  id: string,
+  input: { nombre: string; color: string },
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const nombre = input.nombre.trim()
+  if (!nombre) return { error: "Escribe un nombre." }
+  if (!esColorCategoria(input.color)) return { error: "Elige un color." }
+
+  const { data, error } = await supabase
+    .from("categorias")
+    .update({ nombre, color: input.color })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle()
+  if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
+  if (!data) return { error: "No se encontró la categoría." }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  revalidatePath("/calendario")
+  return {}
+}
+
+/** Elimina una categoría. Los ítems que la usaban quedan SIN categoría (on delete set null). */
+export async function eliminarCategoria(id: string): Promise<Resultado> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("categorias")
+    .delete()
+    .eq("id", id)
+    .select("id")
+  if (error) return { error: "No se pudo eliminar. Intenta de nuevo." }
+  if (!data || data.length === 0) return { error: "No se pudo eliminar la categoría." }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  revalidatePath("/calendario")
   return {}
 }

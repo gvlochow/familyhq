@@ -21,6 +21,7 @@ function item(p: Partial<AgendaItem> & { id: string; fecha: string }): AgendaIte
     completado: false,
     asignados: [],
     agregadoPor: null,
+    categoria: null,
     ...p,
   }
 }

@@ -14,6 +14,7 @@ import {
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { etiquetaCuando } from "@/lib/availability/formato"
 import {
   marcarCompletado,
@@ -22,6 +23,7 @@ import {
   eliminarActividadRecurrente,
 } from "@/app/(app)/tareas/actions"
 import { AsignadosChips } from "./asignados-chips"
+import { CategoriaChip } from "./categoria-chip"
 import { AgendaSheet } from "./agenda-sheet"
 import { cn } from "@/lib/utils"
 
@@ -37,11 +39,13 @@ export function AgendaTab({
   items,
   nowISO,
   miembros,
+  categorias,
   agregadoPor,
 }: {
   items: AgendaItem[]
   nowISO: string
   miembros: MiembroRef[]
+  categorias: CategoriaRef[]
   agregadoPor: string | null
 }) {
   const router = useRouter()
@@ -117,6 +121,7 @@ export function AgendaTab({
       {editando && (
         <AgendaSheet
           miembros={miembros}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           editar={editando}
           onClose={() => setEditando(null)}
@@ -126,6 +131,7 @@ export function AgendaTab({
       {abierto && (
         <AgendaSheet
           miembros={miembros}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           onClose={() => setAbierto(false)}
         />
@@ -180,7 +186,11 @@ function Fila({
           {item.recurrente && <RepeatIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label="Se repite" />}
           <span className="truncate">{item.titulo}</span>
         </span>
-        <span className="truncate text-xs text-muted-foreground">
+        <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          {item.categoria && (
+            <CategoriaChip categoria={item.categoria} conNombre className="text-muted-foreground/80" />
+          )}
+          {item.categoria && <span className="text-muted-foreground/50">·</span>}
           {cuando}
           {item.recurrente && item.recurrenciaResumen && (
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>

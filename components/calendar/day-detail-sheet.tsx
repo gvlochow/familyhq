@@ -11,6 +11,7 @@ import type { MiembroCalendario } from "@/lib/availability/mes-familia"
 import type { AgendaItem } from "@/lib/agenda/tipos"
 import { ESTADO_META } from "@/components/availability/estado-meta"
 import { AsignadosChips } from "@/components/agenda/asignados-chips"
+import { CategoriaChip } from "@/components/agenda/categoria-chip"
 import { cn } from "@/lib/utils"
 
 /** Color de relleno de la barra por estado. */
@@ -196,7 +197,13 @@ function AgendaFila({
           )}
           <span className="truncate">{item.titulo}</span>
         </span>
-        <span className="truncate text-xs text-muted-foreground">
+        <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+          {item.categoria && (
+            <>
+              <CategoriaChip categoria={item.categoria} conNombre className="text-muted-foreground/80" />
+              <span className="text-muted-foreground/50">·</span>
+            </>
+          )}
           {item.hora ?? "Todo el día"}
           {item.recurrente && item.recurrenciaResumen && (
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>

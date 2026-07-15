@@ -10,6 +10,7 @@ import { construirFeed } from "@/lib/agenda/feed"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
 import { cargarTramosEfectivos } from "./_lib/tramos-efectivos"
 import { cargarAgendaRecurrente } from "./_lib/agenda-recurrente"
+import { cargarCategorias } from "./_lib/categorias"
 import { MemberStatusCard } from "@/components/home/member-status-card"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
@@ -110,20 +111,24 @@ export default async function HomePage() {
     }))
 
   // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
-  const { data: agendaRaw } = await supabase
-    .from("agenda_items")
-    .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
-    .gte("fecha", inicioVentana.toISODate()!)
-    .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!)
+  const [{ data: agendaRaw }, categorias] = await Promise.all([
+    supabase
+      .from("agenda_items")
+      .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by, categoria_id")
+      .gte("fecha", inicioVentana.toISODate()!)
+      .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!),
+    cargarCategorias(supabase),
+  ])
 
   const puntuales: AgendaItem[] = (agendaRaw ?? [])
-    .map((r) => mapearAgendaItem(r, miembrosById))
+    .map((r) => mapearAgendaItem(r, miembrosById, categorias))
     .filter((it): it is AgendaItem => it !== null)
 
   // Ocurrencias recurrentes de la misma ventana; construirFeed las acota fino.
   const recurrentes = await cargarAgendaRecurrente(
     supabase,
     miembrosById,
+    categorias,
     inicioVentana.toISODate()!,
     inicioVentana.plus({ days: DIAS }).toISODate()!,
   )
@@ -183,7 +188,12 @@ export default async function HomePage() {
         <ProximoList filas={filas} nowISO={nowISO} />
       </div>
 
-      <HomeActions miembros={miembrosRef} editables={editables} agregadoPor={agregadoPor} />
+      <HomeActions
+        miembros={miembrosRef}
+        categorias={[...categorias.values()]}
+        editables={editables}
+        agregadoPor={agregadoPor}
+      />
     </main>
   )
 }

@@ -6,11 +6,13 @@ import {
   type ReglaRecurrenteDB,
 } from './recurrente'
 import type { AgendaItem, MiembroRef } from './tipos'
+import type { CategoriaRef } from './categorias'
 
 const miembros = new Map<string, MiembroRef>([
   ['m1', { id: 'm1', inicial: 'A', nombre: 'Ana' }],
   ['m2', { id: 'm2', inicial: 'B', nombre: 'Beto' }],
 ])
+const cats = new Map<string, CategoriaRef>([['c1', { id: 'c1', nombre: 'Pagos', color: 'ambar' }]])
 
 function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
   return {
@@ -23,6 +25,7 @@ function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
     fecha_inicio: '2026-01-01',
     fecha_fin: null,
     created_by: 'm2',
+    categoria_id: null,
     ...over,
   }
 }
@@ -35,7 +38,7 @@ describe('idOcurrencia', () => {
 
 describe('expandirRecurrentes', () => {
   it('expande una regla mensual a ocurrencias AgendaItem con asignados y creador', () => {
-    const items = expandirRecurrentes([regla()], new Set(), '2026-07-01', '2026-09-30', miembros)
+    const items = expandirRecurrentes([regla()], new Set(), '2026-07-01', '2026-09-30', miembros, cats)
     expect(items.map((i) => i.fecha)).toEqual(['2026-07-05', '2026-08-05', '2026-09-05'])
     const primero = items[0]
     expect(primero.id).toBe('rec:r1:2026-07-05')
@@ -51,13 +54,20 @@ describe('expandirRecurrentes', () => {
 
   it('marca completado según el set de completadas', () => {
     const completadas = new Set(['r1:2026-08-05'])
-    const items = expandirRecurrentes([regla()], completadas, '2026-07-01', '2026-09-30', miembros)
+    const items = expandirRecurrentes([regla()], completadas, '2026-07-01', '2026-09-30', miembros, cats)
     expect(items.find((i) => i.fecha === '2026-08-05')?.completado).toBe(true)
     expect(items.find((i) => i.fecha === '2026-07-05')?.completado).toBe(false)
   })
 
+  it('resuelve la categoría contra el mapa; null si no tiene o no resuelve', () => {
+    const conCat = expandirRecurrentes([regla({ categoria_id: 'c1' })], new Set(), '2026-07-01', '2026-07-31', miembros, cats)
+    expect(conCat[0].categoria).toEqual({ id: 'c1', nombre: 'Pagos', color: 'ambar' })
+    const sinCat = expandirRecurrentes([regla({ categoria_id: 'zzz' })], new Set(), '2026-07-01', '2026-07-31', miembros, cats)
+    expect(sinCat[0].categoria).toBeNull()
+  })
+
   it('recorta la hora HH:MM:SS -> HH:MM', () => {
-    const items = expandirRecurrentes([regla({ hora: '19:30:00' })], new Set(), '2026-07-01', '2026-07-31', miembros)
+    const items = expandirRecurrentes([regla({ hora: '19:30:00' })], new Set(), '2026-07-01', '2026-07-31', miembros, cats)
     expect(items[0].hora).toBe('19:30')
   })
 
@@ -66,12 +76,12 @@ describe('expandirRecurrentes', () => {
       regla({ id: 'x', tipo: 'inventado' }),
       regla({ id: 'y', recurrence: { tipo: 'otro' } }),
     ]
-    expect(expandirRecurrentes(malas, new Set(), '2026-07-01', '2026-12-31', miembros)).toEqual([])
+    expect(expandirRecurrentes(malas, new Set(), '2026-07-01', '2026-12-31', miembros, cats)).toEqual([])
   })
 
   it('ordena por fecha al mezclar varias reglas', () => {
     const semanal = regla({ id: 'r2', recurrence: { tipo: 'dias_semana', dias: [2] }, asignado_a: [] })
-    const items = expandirRecurrentes([regla(), semanal], new Set(), '2026-07-01', '2026-07-08', miembros)
+    const items = expandirRecurrentes([regla(), semanal], new Set(), '2026-07-01', '2026-07-08', miembros, cats)
     // dia_mes 5 -> 07-05 (domingo); dias_semana martes -> 07-07. Ordenadas.
     expect(items.map((i) => i.fecha)).toEqual(['2026-07-05', '2026-07-07'])
   })
@@ -79,7 +89,7 @@ describe('expandirRecurrentes', () => {
 
 describe('proximaPorRegla', () => {
   function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
-    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, completado, asignados: [], agregadoPor: null, recurrente: true, recurrenteId }
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
   }
 
   it('deja una fila por regla: su ocurrencia más temprana', () => {

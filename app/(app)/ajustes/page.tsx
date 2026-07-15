@@ -9,6 +9,8 @@ import {
   type IntegranteVista,
 } from "@/components/ajustes/integrantes-section"
 import { HorarioSection } from "@/components/ajustes/horario-section"
+import { CategoriasSection } from "@/components/ajustes/categorias-section"
+import { cargarCategorias } from "../_lib/categorias"
 import { signOut } from "./actions"
 
 /**
@@ -23,9 +25,10 @@ export default async function AjustesPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: hogar }, { data: members }] = await Promise.all([
+  const [{ data: hogar }, { data: members }, categorias] = await Promise.all([
     supabase.from("households").select("name").limit(1).maybeSingle(),
     supabase.from("members").select("id, display_name, user_id, rol, tipo_horario"),
+    cargarCategorias(supabase),
   ])
 
   // Mi horario: la conexión del rol variable y/o los bloques del horario fijo.
@@ -75,6 +78,8 @@ export default async function AjustesPage() {
           bloquesFijo={filasFijo && filasFijo.length > 0 ? bloquesDesdeFilas(filasFijo) : undefined}
         />
       )}
+
+      <CategoriasSection categorias={[...categorias.values()]} />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">Sesión</h2>

@@ -13,12 +13,14 @@ import {
   type TipoAgenda,
 } from "@/lib/agenda/tipos"
 import type { Recurrencia } from "@/lib/agenda/recurrencia"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import {
   crearAgendaItem,
   crearActividadRecurrente,
   editarAgendaItem,
   editarActividadRecurrente,
 } from "@/app/(app)/tareas/actions"
+import { CategoriaPicker } from "./categoria-picker"
 import { cn } from "@/lib/utils"
 
 const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" }
@@ -45,11 +47,13 @@ const DIAS_SEMANA: { iso: number; letra: string }[] = [
  */
 export function AgendaSheet({
   miembros,
+  categorias,
   agregadoPor,
   editar,
   onClose,
 }: {
   miembros: MiembroRef[]
+  categorias: CategoriaRef[]
   agregadoPor: string | null
   /** Item a editar. Si está presente, la hoja es de EDICIÓN (prellena y actualiza). */
   editar?: AgendaItem
@@ -68,6 +72,7 @@ export function AgendaSheet({
   const [asignados, setAsignados] = useState<string[]>(
     editar?.asignados.map((a) => a.id) ?? [],
   )
+  const [categoriaId, setCategoriaId] = useState<string | null>(editar?.categoria?.id ?? null)
   // Recurrencia. En edición, el tipo (puntual/recurrente) queda fijo: no se ofrece el toggle.
   const [repite, setRepite] = useState(editar?.recurrente ?? false)
   const [patron, setPatron] = useState<Patron>(rec?.tipo === "dias_semana" ? "semanal" : "mensual")
@@ -110,6 +115,7 @@ export function AgendaSheet({
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
+        categoriaId,
       })
     } else if (esEdicion) {
       res = await editarAgendaItem(editar!.id, {
@@ -118,6 +124,7 @@ export function AgendaSheet({
         fecha,
         hora: horaFinal,
         asignadoA: asignados,
+        categoriaId,
       })
     } else if (repite) {
       res = await crearActividadRecurrente({
@@ -127,9 +134,10 @@ export function AgendaSheet({
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
+        categoriaId,
       })
     } else {
-      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, asignadoA: asignados })
+      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, asignadoA: asignados, categoriaId })
     }
 
     setGuardando(false)
@@ -355,6 +363,9 @@ export function AgendaSheet({
             </div>
           </fieldset>
         )}
+
+        {/* Categoría (opcional). */}
+        <CategoriaPicker categorias={categorias} value={categoriaId} onChange={setCategoriaId} />
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

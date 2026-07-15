@@ -8,6 +8,7 @@ import type { Json } from "@/lib/database.types"
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { esTipoAgenda } from "@/lib/agenda/tipos"
 import { esRecurrencia } from "@/lib/agenda/recurrencia"
+import { esColorCategoria } from "@/lib/agenda/categorias"
 
 const RE_ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -31,6 +32,47 @@ async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>)
   return data
 }
 
+/** Devuelve el categoriaId si pertenece al hogar, o null (categoría inválida se descarta). */
+async function categoriaValida(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  householdId: string,
+  categoriaId?: string | null,
+): Promise<string | null> {
+  if (!categoriaId) return null
+  const { data } = await supabase
+    .from("categorias")
+    .select("id")
+    .eq("id", categoriaId)
+    .eq("household_id", householdId)
+    .maybeSingle()
+  return data ? categoriaId : null
+}
+
+/** Crea una categoría en el hogar. Devuelve su id para seleccionarla al vuelo. */
+export async function crearCategoria(input: {
+  nombre: string
+  color: string
+}): Promise<{ error?: string; id?: string }> {
+  const supabase = await createClient()
+  const miembro = await miembroActual(supabase)
+  if (!miembro) return { error: "No perteneces a un hogar." }
+  const nombre = input.nombre.trim()
+  if (!nombre) return { error: "Escribe un nombre." }
+  if (!esColorCategoria(input.color)) return { error: "Elige un color." }
+
+  const { data, error } = await supabase
+    .from("categorias")
+    .insert({ household_id: miembro.household_id, nombre, color: input.color })
+    .select("id")
+    .single()
+  if (error || !data) return { error: "No se pudo crear la categoría." }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  revalidatePath("/calendario")
+  return { id: data.id }
+}
+
 /** Filtra ids de asignados a los que sean integrantes del MISMO hogar (dedup). */
 async function asignadosDelHogar(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -50,6 +92,7 @@ export async function crearAgendaItem(input: {
   fecha: string
   hora: string | null
   asignadoA?: string[]
+  categoriaId?: string | null
 }): Promise<Resultado> {
   const supabase = await createClient()
   const miembro = await miembroActual(supabase)
@@ -64,6 +107,7 @@ export async function crearAgendaItem(input: {
 
   // Asignados: solo ids que sean integrantes del MISMO hogar (los demás se descartan).
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+  const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
 
   const { error } = await supabase.from("agenda_items").insert({
     household_id: miembro.household_id,
@@ -73,6 +117,7 @@ export async function crearAgendaItem(input: {
     hora,
     asignado_a: asignadoA,
     created_by: miembro.id,
+    categoria_id: categoriaId,
   })
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
 
@@ -84,7 +129,14 @@ export async function crearAgendaItem(input: {
 /** Edita un item de agenda puntual. */
 export async function editarAgendaItem(
   id: string,
-  input: { tipo: string; titulo: string; fecha: string; hora: string | null; asignadoA?: string[] },
+  input: {
+    tipo: string
+    titulo: string
+    fecha: string
+    hora: string | null
+    asignadoA?: string[]
+    categoriaId?: string | null
+  },
 ): Promise<Resultado> {
   const supabase = await createClient()
   const miembro = await miembroActual(supabase)
@@ -98,10 +150,11 @@ export async function editarAgendaItem(
   if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+  const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
 
   const { data, error } = await supabase
     .from("agenda_items")
-    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, asignado_a: asignadoA })
+    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, asignado_a: asignadoA, categoria_id: categoriaId })
     .eq("id", id)
     .select("id")
     .maybeSingle()
@@ -124,6 +177,7 @@ export async function crearActividadRecurrente(input: {
   recurrence: unknown
   asignadoA?: string[]
   fechaFin?: string | null
+  categoriaId?: string | null
 }): Promise<Resultado> {
   const supabase = await createClient()
   const miembro = await miembroActual(supabase)
@@ -139,6 +193,7 @@ export async function crearActividadRecurrente(input: {
   if (fechaFin && !RE_FECHA.test(fechaFin)) return { error: "Fecha de término inválida." }
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+  const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
   const hoy = DateTime.now().setZone(TZ_LOCAL).toISODate()!
 
   const { error } = await supabase.from("recurring_activities").insert({
@@ -151,6 +206,7 @@ export async function crearActividadRecurrente(input: {
     fecha_inicio: hoy,
     fecha_fin: fechaFin,
     created_by: miembro.id,
+    categoria_id: categoriaId,
   })
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
 
@@ -169,6 +225,7 @@ export async function editarActividadRecurrente(
     recurrence: unknown
     asignadoA?: string[]
     fechaFin?: string | null
+    categoriaId?: string | null
   },
 ): Promise<Resultado> {
   const supabase = await createClient()
@@ -185,6 +242,7 @@ export async function editarActividadRecurrente(
   if (fechaFin && !RE_FECHA.test(fechaFin)) return { error: "Fecha de término inválida." }
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
+  const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
 
   const { data, error } = await supabase
     .from("recurring_activities")
@@ -195,6 +253,7 @@ export async function editarActividadRecurrente(
       recurrence: input.recurrence as Json,
       asignado_a: asignadoA,
       fecha_fin: fechaFin,
+      categoria_id: categoriaId,
     })
     .eq("id", ruleId)
     .select("id")

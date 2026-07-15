@@ -12,6 +12,7 @@ import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda
 import { CalendarView } from "@/components/calendar/calendar-view"
 import { cargarTramosEfectivos } from "../_lib/tramos-efectivos"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
+import { cargarCategorias } from "../_lib/categorias"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -71,18 +72,19 @@ export default async function CalendarioPage({
   }))
   const miembrosById = new Map(miembrosRef.map((m) => [m.id, m]))
 
+  const categorias = await cargarCategorias(supabase)
   const { data: agendaRaw } = integrantes.length
     ? await supabase
         .from("agenda_items")
-        .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by")
+        .select("id, tipo, titulo, fecha, hora, completado, asignado_a, created_by, categoria_id")
         .gte("fecha", desdeAgenda)
         .lte("fecha", hastaAgenda)
     : { data: [] }
   const puntuales = (agendaRaw ?? [])
-    .map((r) => mapearAgendaItem(r, miembrosById))
+    .map((r) => mapearAgendaItem(r, miembrosById, categorias))
     .filter((it): it is AgendaItem => it !== null)
   const recurrentes = integrantes.length
-    ? await cargarAgendaRecurrente(supabase, miembrosById, desdeAgenda, hastaAgenda)
+    ? await cargarAgendaRecurrente(supabase, miembrosById, categorias, desdeAgenda, hastaAgenda)
     : []
 
   const agendaPorDia: Record<string, AgendaItem[]> = {}
@@ -141,6 +143,7 @@ export default async function CalendarioPage({
           miembros={miembros}
           agendaPorDia={agendaPorDia}
           miembrosRef={miembrosRef}
+          categorias={[...categorias.values()]}
           agregadoPor={agregadoPor}
         />
       ) : (
