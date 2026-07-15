@@ -74,7 +74,13 @@ export default async function TareasPage() {
         <p className="text-sm text-muted-foreground">Lo que hay que hacer y lo que viene.</p>
       </div>
 
-      <AgendaTab items={items} nowISO={nowISO} miembros={miembrosRef} agregadoPor={agregadoPor} />
+      <AgendaTab
+        items={items}
+        nowISO={nowISO}
+        miembros={miembrosRef}
+        categorias={[...categorias.values()]}
+        agregadoPor={agregadoPor}
+      />
     </main>
   )
 }

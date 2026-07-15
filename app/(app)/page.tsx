@@ -188,7 +188,12 @@ export default async function HomePage() {
         <ProximoList filas={filas} nowISO={nowISO} />
       </div>
 
-      <HomeActions miembros={miembrosRef} editables={editables} agregadoPor={agregadoPor} />
+      <HomeActions
+        miembros={miembrosRef}
+        categorias={[...categorias.values()]}
+        editables={editables}
+        agregadoPor={agregadoPor}
+      />
     </main>
   )
 }

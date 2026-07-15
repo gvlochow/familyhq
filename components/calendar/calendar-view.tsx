@@ -9,6 +9,7 @@ import type {
   MiembroCalendario,
 } from "@/lib/availability/mes-familia"
 import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { marcarCompletado, marcarOcurrenciaRecurrente } from "@/app/(app)/tareas/actions"
 import { AgendaSheet } from "@/components/agenda/agenda-sheet"
 import { MonthGridFamily } from "./month-grid-family"
@@ -28,12 +29,14 @@ export function CalendarView({
   miembros,
   agendaPorDia,
   miembrosRef,
+  categorias,
   agregadoPor,
 }: {
   grilla: GrillaMesFamilia
   miembros: MiembroCalendario[]
   agendaPorDia: Record<string, AgendaItem[]>
   miembrosRef: MiembroRef[]
+  categorias: CategoriaRef[]
   agregadoPor: string | null
 }) {
   const router = useRouter()
@@ -95,6 +98,7 @@ export function CalendarView({
       {agregar && (
         <AgendaSheet
           miembros={miembrosRef}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           onClose={() => setAgregar(false)}
         />
@@ -103,6 +107,7 @@ export function CalendarView({
       {editando && (
         <AgendaSheet
           miembros={miembrosRef}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           editar={editando}
           onClose={() => setEditando(null)}

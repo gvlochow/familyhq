@@ -14,6 +14,7 @@ import {
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { etiquetaCuando } from "@/lib/availability/formato"
 import {
   marcarCompletado,
@@ -38,11 +39,13 @@ export function AgendaTab({
   items,
   nowISO,
   miembros,
+  categorias,
   agregadoPor,
 }: {
   items: AgendaItem[]
   nowISO: string
   miembros: MiembroRef[]
+  categorias: CategoriaRef[]
   agregadoPor: string | null
 }) {
   const router = useRouter()
@@ -118,6 +121,7 @@ export function AgendaTab({
       {editando && (
         <AgendaSheet
           miembros={miembros}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           editar={editando}
           onClose={() => setEditando(null)}
@@ -127,6 +131,7 @@ export function AgendaTab({
       {abierto && (
         <AgendaSheet
           miembros={miembros}
+          categorias={categorias}
           agregadoPor={agregadoPor}
           onClose={() => setAbierto(false)}
         />

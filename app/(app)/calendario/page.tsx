@@ -143,6 +143,7 @@ export default async function CalendarioPage({
           miembros={miembros}
           agendaPorDia={agendaPorDia}
           miembrosRef={miembrosRef}
+          categorias={[...categorias.values()]}
           agregadoPor={agregadoPor}
         />
       ) : (
