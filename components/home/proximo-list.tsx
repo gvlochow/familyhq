@@ -39,11 +39,15 @@ export function ProximoList({ filas, nowISO }: { filas: FilaFeed[]; nowISO: stri
                 <Icono fila={f} />
               )}
 
-              <span className="flex flex-1 items-center gap-1.5 truncate text-sm font-medium text-foreground">
+              <span className="flex flex-1 items-center gap-1.5 truncate text-sm text-foreground">
+                <span className="truncate font-medium">{titulo(f)}</span>
                 {f.clase === "agenda" && f.item.categoria && (
-                  <CategoriaChip categoria={f.item.categoria} />
+                  <CategoriaChip
+                    categoria={f.item.categoria}
+                    conNombre
+                    className="shrink-0 text-xs italic text-muted-foreground/80"
+                  />
                 )}
-                <span className="truncate">{titulo(f)}</span>
               </span>
 
               {f.clase === "agenda" && <AsignadosChips asignados={f.item.asignados} />}

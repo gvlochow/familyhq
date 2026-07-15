@@ -71,7 +71,7 @@ export function CalendarView({
       />
 
       {/* Botón flotante para agregar tarea/evento. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30">
         <div className="mx-auto flex w-full max-w-sm justify-end px-6">
           <button
             type="button"

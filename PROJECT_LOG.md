@@ -43,6 +43,7 @@ Estado de cada pilar del MVP (CLAUDE.md: PWA de organización familiar; diferenc
 - [ ] **Deuda de UI menor**: `.select()` en `eliminarAgendaItem`/`eliminarActividadRecurrente`; `<OnboardingHeader>` (5 forms repiten header); `AgendaFila` (detalle del día) duplica algo del `Fila` de la tab.
 - [ ] (Parado) Analítica PostHog — retomar en el piloto.
 - [ ] (Post-MVP) Billing/Stripe — el esquema tiene campos de plan, sin billing.
+- [ ] (Idea futura, 2026-07-15) **Temas configurables** (paletas de color): ~3 básicos + N premium (de pago / incluidos en la suscripción). Parametrizar los tokens de diseño (CSS vars por tema) + preferencia por hogar/usuario + gating premium. Ver memoria `temas-configurables-idea`.
 
 ## Hito: categorías de la agenda + arreglos (2026-07-15, merges `f7def97`/`bd23254`)
 - **Arreglos** (`f7def97`): (1) el editor de integrante en Ajustes ahora incluye el **tipo de horario**; (2) la etiqueta del rol **"sostenedor" → "Responsable"** (`ROL_LABEL` en `lib/members/rol`, valor interno del enum igual, sin migración); (3) **calendario interactivo** — el detalle del día deja de ser solo lectura: marcar/desmarcar una tarea (ramifica puntual/recurrente) y tocar para editar; (4) **botón flotante "+"** en el calendario para agregar tarea/evento. (Desmarcar también está en la tab Tareas → "Hechas".)
