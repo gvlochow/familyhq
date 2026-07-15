@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { CheckIcon, PlusIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 
 import { crearCategoria } from "@/app/(app)/tareas/actions"
 import { PALETA_CATEGORIAS, hexCategoria, type CategoriaRef } from "@/lib/agenda/categorias"
+import { PaletaSwatches } from "./paleta-swatches"
 import { cn } from "@/lib/utils"
 
 /**
@@ -83,24 +84,7 @@ export function CategoriaPicker({
             disabled={pending}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
-          <div className="flex flex-wrap gap-1.5">
-            {PALETA_CATEGORIAS.map((p) => (
-              <button
-                key={p.clave}
-                type="button"
-                onClick={() => setColor(p.clave)}
-                aria-label={p.nombre}
-                aria-pressed={color === p.clave}
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-full ring-2 transition-transform",
-                  color === p.clave ? "ring-foreground/40" : "ring-transparent hover:scale-110",
-                )}
-                style={{ backgroundColor: p.hex }}
-              >
-                {color === p.clave && <CheckIcon className="size-4 text-white" aria-hidden />}
-              </button>
-            ))}
-          </div>
+          <PaletaSwatches value={color} onChange={setColor} disabled={pending} />
           <div className="flex gap-2">
             <button
               type="button"
