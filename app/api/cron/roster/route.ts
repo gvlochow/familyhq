@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createHash } from "node:crypto"
+import { createHash, timingSafeEqual } from "node:crypto"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { decryptSecret } from "@/lib/crypto/secret-box"
@@ -58,9 +58,23 @@ type ResumenConexion =
 
 type Ventana = { desde: string; hasta: string; inicioUtc: string; finUtc: string }
 
+/**
+ * Compara la credencial del disparador en tiempo constante. Un `!==` sobre
+ * strings corta apenas encuentra el primer byte distinto, lo que filtra por
+ * temporización cuántos caracteres del secreto se acertaron. Hasheamos ambos
+ * lados a un digest de largo fijo (32 bytes) y comparamos con timingSafeEqual:
+ * ni el contenido ni el largo del header recibido alteran el tiempo de la
+ * comparación.
+ */
+function credencialValida(header: string | null, secret: string): boolean {
+  const recibido = createHash("sha256").update(header ?? "").digest()
+  const esperado = createHash("sha256").update(`Bearer ${secret}`).digest()
+  return timingSafeEqual(recibido, esperado)
+}
+
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || !credencialValida(request.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
 
