@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { RegisterSW } from "@/components/pwa/register-sw";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-heading" });
@@ -19,6 +20,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FamilyHQ",
   description: "El centro de operaciones del hogar.",
+  applicationName: "FamilyHQ",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FamilyHQ",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon-180.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#284b63",
 };
 
 export default function RootLayout({
@@ -31,7 +45,10 @@ export default function RootLayout({
       lang="es"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable, manrope.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <RegisterSW />
+      </body>
     </html>
   );
 }
