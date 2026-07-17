@@ -30,6 +30,34 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     }
   }
 
+  // Sesión y rate limit ANTES del fetch: la validación dispara una petición a una
+  // URL externa provista por el usuario (primitiva de fetch repetible). Exigir
+  // sesión y acotar los intentos por usuario evita usar la action como proxy de
+  // fetch. El límite vive en Postgres porque en serverless no hay estado en
+  // memoria compartido entre invocaciones.
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
+  }
+
+  const { data: dentroDelLimite, error: rateError } = await supabase.rpc(
+    "consumir_rate_limit",
+    { p_accion: "connect_calendar", p_limite: 10, p_ventana_seg: 600 },
+  )
+  if (rateError) {
+    return { error: "No pudimos procesar la solicitud. Intenta de nuevo." }
+  }
+  if (dentroDelLimite === false) {
+    return {
+      error:
+        "Demasiados intentos seguidos. Espera unos minutos antes de volver a probar.",
+    }
+  }
+
   // 1. Fetch de validación (con timeout).
   let ics: string
   try {
@@ -73,15 +101,6 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
   }
 
   // 3. Persistir cifrado.
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
-  }
-
   const { data: member, error: memberError } = await supabase
     .from("members")
     .select("id")

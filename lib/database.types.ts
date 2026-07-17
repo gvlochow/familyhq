@@ -368,6 +368,24 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       recurring_activities: {
         Row: {
           asignado_a: string[]
@@ -607,6 +625,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consumir_rate_limit: {
+        Args: { p_accion: string; p_limite: number; p_ventana_seg: number }
+        Returns: boolean
+      }
       create_household: { Args: { p_name: string }; Returns: string }
       current_household_id: { Args: never; Returns: string }
     }
