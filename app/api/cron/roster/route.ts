@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { decryptSecret } from "@/lib/crypto/secret-box"
 import { loadRosterEvents } from "@/lib/roster"
+import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
 import {
   construirSegmentos,
   limitesVentanaUtc,
@@ -137,11 +138,7 @@ async function procesarConexion(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   let ics: string
   try {
-    const res = await fetch(url, {
-      cache: "no-store",
-      redirect: "follow",
-      signal: controller.signal,
-    })
+    const res = await fetchFeedSeguro(url, { signal: controller.signal })
     if (!res.ok) {
       console.error(`[cron/roster] conexion ${conexion.id}: HTTP ${res.status}`)
       return { estado: "error" }

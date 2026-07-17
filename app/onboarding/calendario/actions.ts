@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { encryptSecret } from "@/lib/crypto/secret-box"
 import { loadRosterEvents } from "@/lib/roster"
+import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
 
 type ConnectResult = { error: string | null }
 
@@ -35,11 +36,7 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
     try {
-      const res = await fetch(url, {
-        cache: "no-store",
-        redirect: "follow",
-        signal: controller.signal,
-      })
+      const res = await fetchFeedSeguro(url, { signal: controller.signal })
       if (!res.ok) {
         return {
           error:
