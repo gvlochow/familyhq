@@ -1,12 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { RosterEvent } from "@/lib/roster"
+import { loadRosterEvents, type RosterEvent } from "@/lib/roster"
 import {
   construirSegmentos,
   limitesVentanaUtc,
   type Segmento,
 } from "@/lib/roster/segments"
 import { ventanaPorDefecto } from "@/lib/roster/ingest"
+import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
+import { decryptSecret } from "@/lib/crypto/secret-box"
+import {
+  construirSegmentosFijo,
+  type FilaHorarioFijo,
+} from "@/lib/availability/fijo-segmentos"
+
+const FETCH_TIMEOUT_MS = 12_000
 
 /**
  * Materialización de la disponibilidad del rol VARIABLE en availability_segments.
@@ -106,4 +114,91 @@ export async function materializarDisponibilidadVariable(
     bufferSalidaMin ?? undefined,
   )
   return escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
+}
+
+/**
+ * Re-materializa la disponibilidad de UN integrante AHORA, con sus datos actuales
+ * (buffers, horario). Para que un cambio de horario fijo o de buffers se vea al
+ * instante en vez de esperar la próxima corrida del cron ("guardé y no pasó nada").
+ *
+ * - variable: descifra la URL, baja el feed (descarta lo no-iFlight en memoria) y
+ *   reclasifica con los buffers actuales.
+ * - fijo: re-expande el horario semanal con los buffers actuales.
+ * - ninguno / sin conexión / sin bloques: no hay nada que materializar (false).
+ *
+ * Idempotente y no crítica: si falla (p. ej. el feed no responde) devuelve false y
+ * el cron es el respaldo. NUNCA loguea la URL ni el contenido del calendario.
+ */
+export async function rematerializarMiembro(
+  supabase: SupabaseClient,
+  memberId: string,
+): Promise<boolean> {
+  const nowISO = new Date().toISOString()
+
+  const { data: m } = await supabase
+    .from("members")
+    .select("tipo_horario, buffer_llegada_min, buffer_salida_min")
+    .eq("id", memberId)
+    .maybeSingle()
+  if (!m) return false
+
+  if (m.tipo_horario === "variable") {
+    const { data: conn } = await supabase
+      .from("roster_connections")
+      .select("ical_url_encrypted")
+      .eq("member_id", memberId)
+      .maybeSingle()
+    if (!conn) return false // aún no conecta su calendario
+
+    const url = decryptSecret(conn.ical_url_encrypted)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    let ics: string
+    try {
+      const res = await fetchFeedSeguro(url, { signal: controller.signal })
+      if (!res.ok) return false
+      ics = await res.text()
+    } finally {
+      clearTimeout(timeout)
+    }
+    const events = loadRosterEvents(ics)
+    return materializarDisponibilidadVariable(
+      supabase,
+      memberId,
+      events,
+      m.buffer_llegada_min,
+      m.buffer_salida_min,
+      nowISO,
+    )
+  }
+
+  if (m.tipo_horario === "fijo") {
+    const { data: filas } = await supabase
+      .from("fixed_schedules")
+      .select(
+        "dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin",
+      )
+      .eq("member_id", memberId)
+    if (!filas || filas.length === 0) return false
+
+    const dominio: FilaHorarioFijo[] = filas.map((f) => ({
+      diaSemana: f.dia_semana,
+      horaInicio: f.hora_inicio,
+      horaFin: f.hora_fin,
+      almuerzaEnCasa: f.almuerza_en_casa,
+      horaAlmuerzoInicio: f.hora_almuerzo_inicio,
+      horaAlmuerzoFin: f.hora_almuerzo_fin,
+    }))
+    const ventana = ventanaMaterializacion()
+    const segmentos = construirSegmentosFijo(
+      dominio,
+      ventana.desde,
+      ventana.hasta,
+      m.buffer_llegada_min,
+      m.buffer_salida_min,
+    )
+    return escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
+  }
+
+  return false // tipo 'ninguno': sin tramos que materializar
 }
