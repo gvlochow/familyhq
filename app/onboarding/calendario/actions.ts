@@ -2,8 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { encryptSecret } from "@/lib/crypto/secret-box"
-import { loadRosterEvents } from "@/lib/roster"
+import { loadRosterEvents, type RosterEvent } from "@/lib/roster"
 import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
+import { materializarDisponibilidadVariable } from "@/app/_lib/materializar-disponibilidad"
 
 type ConnectResult = { error: string | null }
 
@@ -17,7 +18,11 @@ const FETCH_TIMEOUT_MS = 12_000
  *   2. Hace UN fetch de validación y lo parsea con loadRosterEvents, que
  *      descarta en memoria todo evento sin la firma iFlight (requisito de
  *      privacidad, Ley 19.628). Si no hay eventos de rol, la URL no sirve.
- *   3. Cifra la URL en la app (AES-256-GCM) y hace upsert en roster_connections.
+ *   3. Cifra la URL en la app (AES-256-GCM), hace upsert en roster_connections y
+ *      MATERIALIZA la disponibilidad al instante reusando los eventos ya
+ *      clasificados en memoria (sin fetch extra). Sin esto, la disponibilidad no
+ *      aparecería hasta la próxima corrida del cron (diaria) y el usuario ve
+ *      "guardé y no pasó nada".
  *
  * NUNCA se persiste ni se loguea el contenido del calendario ni la URL en claro.
  * No calcula el destino: devuelve el resultado y el cliente hace router.refresh().
@@ -82,18 +87,19 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     }
   }
 
-  // 2. Validación: ¿hay eventos de rol iFlight? loadRosterEvents descarta lo
-  //    personal en memoria; acá solo miramos la cantidad, nunca el contenido.
-  let cantidadEventosRol: number
+  // 2. Validación + clasificación: ¿hay eventos de rol iFlight? loadRosterEvents
+  //    descarta lo personal en memoria. Guardamos los eventos para materializar la
+  //    disponibilidad sin volver a bajar/parsear el feed; nunca miramos su contenido.
+  let eventosRol: RosterEvent[]
   try {
-    cantidadEventosRol = loadRosterEvents(ics).length
+    eventosRol = loadRosterEvents(ics)
   } catch {
     return {
       error:
         "Ese enlace no parece un calendario iCal válido. Copia la dirección secreta en formato iCal.",
     }
   }
-  if (cantidadEventosRol === 0) {
+  if (eventosRol.length === 0) {
     return {
       error:
         "No encontramos vuelos ni actividades de tripulación en ese calendario. ¿Es la dirección correcta?",
@@ -103,7 +109,7 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
   // 3. Persistir cifrado.
   const { data: member, error: memberError } = await supabase
     .from("members")
-    .select("id")
+    .select("id, buffer_llegada_min")
     .eq("user_id", user.id)
     .maybeSingle()
 
@@ -111,13 +117,36 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     return { error: "No encontramos tu hogar. Intenta de nuevo." }
   }
 
+  const nowISO = new Date().toISOString()
+
+  // Materializar AHORA reusando los eventos ya en memoria. Con la sesión del
+  // usuario, la RLS de availability_segments acota la escritura a su propio hogar.
+  // Un fallo aquí NO rompe el enlace: la conexión igual se guarda y el cron es el
+  // respaldo (last_synced_at queda null y se sincroniza en la próxima corrida).
+  let sincronizado = false
+  try {
+    sincronizado = await materializarDisponibilidadVariable(
+      supabase,
+      member.id,
+      eventosRol,
+      member.buffer_llegada_min,
+      nowISO,
+    )
+  } catch (e) {
+    // Nunca se loguea contenido ni la URL, solo el mensaje del error.
+    console.error(
+      "[connectCalendar] materialización inmediata falló:",
+      e instanceof Error ? e.message : "error desconocido",
+    )
+  }
+
   const { error } = await supabase.from("roster_connections").upsert(
     {
       member_id: member.id,
       ical_url_encrypted: encryptSecret(url),
-      // La clasificación/ingesta real la hace el cron; acá solo dejamos la
-      // conexión lista. last_synced_at queda null hasta el primer sync.
-      last_synced_at: null,
+      // Si la materialización inmediata funcionó, sellamos el sync; si no, queda
+      // null y el cron la toma en la próxima corrida.
+      last_synced_at: sincronizado ? nowISO : null,
       last_fetch_hash: null,
     },
     { onConflict: "member_id" }
