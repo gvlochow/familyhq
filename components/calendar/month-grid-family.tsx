@@ -121,18 +121,29 @@ export function MonthGridFamily({
               </span>
               {fuera.length > 0 && (
                 <span className="mt-auto flex flex-wrap gap-0.5">
-                  {visibles.map((m) => (
-                    <span
-                      key={m.id}
-                      title={`${m.nombre}: ${m.estado === "fuera" ? "fuera" : "por confirmar"}`}
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded text-[9px] font-semibold",
-                        INDICADOR[m.estado!],
-                      )}
-                    >
-                      {m.inicial}
-                    </span>
-                  ))}
+                  {visibles.map((m) => {
+                    const esParcial = m.estado === "fuera" && m.parcial
+                    return (
+                      <span
+                        key={m.id}
+                        title={`${m.nombre}: ${
+                          m.estado === "fuera"
+                            ? m.parcial
+                              ? "parte del día fuera"
+                              : "fuera"
+                            : "por confirmar"
+                        }`}
+                        className={cn(
+                          "flex size-4 items-center justify-center rounded text-[9px] font-semibold",
+                          esParcial
+                            ? "border border-primary text-primary"
+                            : INDICADOR[m.estado!],
+                        )}
+                      >
+                        {m.inicial}
+                      </span>
+                    )
+                  })}
                   {resto > 0 && (
                     <span className="flex size-4 items-center justify-center rounded bg-muted text-[9px] font-semibold text-muted-foreground">
                       +{resto}
@@ -161,6 +172,10 @@ export function MonthGridFamily({
           <li className="flex items-center gap-1.5">
             <span className="size-3 rounded-sm bg-primary" aria-hidden />
             <span className="text-xs text-muted-foreground">Fuera</span>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="size-3 rounded-sm border border-primary" aria-hidden />
+            <span className="text-xs text-muted-foreground">Parte del día fuera</span>
           </li>
           {hayVariable && (
             <li className="flex items-center gap-1.5">

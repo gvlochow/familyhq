@@ -6,63 +6,86 @@ function t(inicioUtc: string, finUtc: string, estado: string): TramoVista {
   return { inicioUtc, finUtc, estado }
 }
 
-describe('resumirDia (precedencia con piso)', () => {
-  it('aterrizaje nocturno: fuera ~2h no alcanza el piso -> en_casa', () => {
+describe('resumirDia (casa / parcial / fuera)', () => {
+  it('vuelo nocturno que llega 05:45: fuera PARCIAL (en casa 18h)', () => {
     const dia = [
-      t('2026-07-13T04:00:00Z', '2026-07-13T05:45:00Z', 'fuera'), // 00:00-01:45 (~2h)
-      t('2026-07-13T05:45:00Z', '2026-07-14T04:00:00Z', 'en_casa'), // ~22h
+      t('2026-07-13T04:00:00Z', '2026-07-13T09:45:00Z', 'fuera'), // 00:00-05:45 (5.75h)
+      t('2026-07-13T09:45:00Z', '2026-07-14T04:00:00Z', 'en_casa'), // resto del día
     ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('en_casa')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: true })
   })
 
-  it('jornada 9-18 (fuera 9h) supera el piso -> fuera, aunque haya 15h en casa', () => {
-    // El caso que la dominancia por duración pura resolvía mal (daba en_casa).
+  it('vuelo nocturno que sale de noche: fuera PARCIAL (2h)', () => {
     const dia = [
-      t('2026-07-13T04:00:00Z', '2026-07-13T13:00:00Z', 'en_casa'), // 9h mañana
+      t('2026-07-13T04:00:00Z', '2026-07-14T02:00:00Z', 'en_casa'), // 00:00-22:00
+      t('2026-07-14T02:00:00Z', '2026-07-14T04:00:00Z', 'fuera'), // 22:00-24:00 (2h)
+    ]
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: true })
+  })
+
+  it('jornada 9-18 (fuera 9h ≥ 8h): fuera SÓLIDO', () => {
+    const dia = [
+      t('2026-07-13T04:00:00Z', '2026-07-13T13:00:00Z', 'en_casa'),
       t('2026-07-13T13:00:00Z', '2026-07-13T22:00:00Z', 'fuera'), // 9h jornada
-      t('2026-07-13T22:00:00Z', '2026-07-14T04:00:00Z', 'en_casa'), // 6h noche
+      t('2026-07-13T22:00:00Z', '2026-07-14T04:00:00Z', 'en_casa'),
     ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('fuera')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: false })
   })
 
-  it('día de vuelo completo: fuera', () => {
+  it('fuera exactamente 8h: sólido (borde de jornada completa)', () => {
+    const dia = [
+      t('2026-07-13T04:00:00Z', '2026-07-13T14:00:00Z', 'en_casa'), // 10h
+      t('2026-07-13T14:00:00Z', '2026-07-13T22:00:00Z', 'fuera'), // 8h exactas
+      t('2026-07-13T22:00:00Z', '2026-07-14T04:00:00Z', 'en_casa'), // 6h
+    ]
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: false })
+  })
+
+  it('día de vuelo completo: fuera sólido', () => {
     const dia = [t('2026-07-13T04:00:00Z', '2026-07-14T04:00:00Z', 'fuera')]
-    expect(resumirDia(dia, '2026-07-13')).toBe('fuera')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: false })
   })
 
-  it('standby de jornada (12h) supera el piso -> standby', () => {
+  it('fuera de 45 min (borde del ruido): parcial, NO en casa', () => {
+    const dia = [
+      t('2026-07-13T04:00:00Z', '2026-07-13T13:00:00Z', 'en_casa'),
+      t('2026-07-13T13:00:00Z', '2026-07-13T13:45:00Z', 'fuera'), // 45 min exactos
+      t('2026-07-13T13:45:00Z', '2026-07-14T04:00:00Z', 'en_casa'),
+    ]
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: true })
+  })
+
+  it('blip de 30 min fuera (bajo el ruido): en casa', () => {
+    const dia = [
+      t('2026-07-13T04:00:00Z', '2026-07-13T13:00:00Z', 'en_casa'),
+      t('2026-07-13T13:00:00Z', '2026-07-13T13:30:00Z', 'fuera'), // 30 min < 45
+      t('2026-07-13T13:30:00Z', '2026-07-14T04:00:00Z', 'en_casa'),
+    ]
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'en_casa', parcial: false })
+  })
+
+  it('standby de jornada (12h) supera el piso: standby', () => {
     const dia = [
       t('2026-07-13T04:00:00Z', '2026-07-13T16:00:00Z', 'en_casa'), // 12h
       t('2026-07-13T16:00:00Z', '2026-07-14T04:00:00Z', 'standby_casa'), // 12h
     ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('standby_casa')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'standby_casa', parcial: false })
   })
 
-  it('un rato fuera marginal (2h de tarde) no define el día -> en_casa', () => {
-    const dia = [
-      t('2026-07-13T04:00:00Z', '2026-07-13T22:00:00Z', 'en_casa'),
-      t('2026-07-13T22:00:00Z', '2026-07-14T00:00:00Z', 'fuera'), // 2h < piso
-      t('2026-07-14T00:00:00Z', '2026-07-14T04:00:00Z', 'en_casa'),
-    ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('en_casa')
-  })
-
-  it('datos parciales sub-piso: cae a dominante por duración', () => {
-    // Solo 3h de datos ese día, ninguno supera el piso -> gana el de más duración.
+  it('datos parciales con fuera notable (2h) y casa (1h): fuera parcial', () => {
     const dia = [
       t('2026-07-13T04:00:00Z', '2026-07-13T06:00:00Z', 'fuera'), // 2h
       t('2026-07-13T06:00:00Z', '2026-07-13T07:00:00Z', 'en_casa'), // 1h
     ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('fuera')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: true })
   })
 
   it('solo cuenta el solape con el día (recorta tramos que cruzan el borde)', () => {
-    // Tramo fuera enorme que cubre el 13 entero pero también días vecinos.
     const dia = [t('2026-07-10T04:00:00Z', '2026-07-20T04:00:00Z', 'fuera')]
-    expect(resumirDia(dia, '2026-07-13')).toBe('fuera')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'fuera', parcial: false })
   })
 
-  it('sin tramo que solape el día -> null', () => {
+  it('sin tramo que solape el día: null', () => {
     const dia = [t('2026-07-20T04:00:00Z', '2026-07-21T04:00:00Z', 'fuera')]
     expect(resumirDia(dia, '2026-07-13')).toBeNull()
   })
@@ -72,7 +95,7 @@ describe('resumirDia (precedencia con piso)', () => {
       t('2026-07-13T04:00:00Z', '2026-07-13T22:00:00Z', 'raro'), // se descarta
       t('2026-07-13T22:00:00Z', '2026-07-14T04:00:00Z', 'en_casa'), // único válido
     ]
-    expect(resumirDia(dia, '2026-07-13')).toBe('en_casa')
+    expect(resumirDia(dia, '2026-07-13')).toEqual({ estado: 'en_casa', parcial: false })
   })
 })
 

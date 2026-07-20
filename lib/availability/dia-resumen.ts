@@ -3,13 +3,26 @@
  * y el chip semanal del home: una celda chica no puede mostrar 5 tramos, así que
  * colapsa el día a UN estado. PURO: sin Next.js ni Supabase.
  *
- * Regla (decidida con el usuario): PRECEDENCIA CON PISO. Gana el estado de mayor
- * precedencia (fuera > standby_casa > por_confirmar > en_casa) que dure al menos
- * MINUTOS_PISO en el día; si el tiempo de un estado "fuera de casa" es marginal
- * (p. ej. el aterrizaje nocturno: fuera ~2h de madrugada), no alcanza el piso y el
- * día se lee "en casa". Así ambos casos quedan bien: un 9-18 (fuera 9h) se lee
- * FUERA, y el aterrizaje 1am se lee EN CASA — cosa que ni el modelo por-día ni una
- * dominancia por duración pura resolvían (esta última dejaba TODO 9-18 como en_casa).
+ * ┌─ REGLA DEL EJE CASA ↔ FUERA (tres niveles) ────────────────────────────────┐
+ * │ Decidida con el usuario (2026-07-20). Colapsar el día a UN estado pierde    │
+ * │ información: los días de tripulación son casi siempre MIXTOS (un pedazo     │
+ * │ fuera, un pedazo en casa). Un vuelo nocturno que cruza la medianoche es el  │
+ * │ caso claro: sale la noche del día D-1 (2h fuera) y aterriza 05:45 del día D │
+ * │ (5.75h fuera) — con un solo estado, D-1 se leía "en casa" (ocultaba que se  │
+ * │ fue) y D se leía "fuera" (cuando estuvo en casa 18h). Ambos mentían.        │
+ * │                                                                             │
+ * │ Con `fuera` = minutos fuera en el día y `casa` = minutos no-fuera:          │
+ * │   • fuera < MINUTOS_RUIDO (45)            → NO es día fuera (roce marginal). │
+ * │   • fuera ≥ 45 y (casa < 45 ó            → FUERA sólido (fuera casi todo    │
+ * │     fuera ≥ MINUTOS_JORNADA_COMPLETA 480)   el día, o una jornada completa). │
+ * │   • resto (fuera y casa ambos notables)  → FUERA PARCIAL (día mixto).       │
+ * │ Así un 9-18 (fuera ~10h ≥ 8h) queda FUERA limpio, y el vuelo nocturno queda │
+ * │ PARCIAL en sus dos días. Los umbrales son las perillas; ver constantes.     │
+ * └─────────────────────────────────────────────────────────────────────────────┘
+ *
+ * Cuando el fuera es despreciable (< 45 min), el titular sale de los estados
+ * "en casa-ish" (standby / blanco / en casa) por PRECEDENCIA CON PISO (MINUTOS_PISO):
+ * gana el de mayor precedencia que dure ≥ el piso; si ninguno, el más largo.
  *
  * OJO: esto es DISTINTO de estadoDelDiaDesdeSegmentos (lib/roster/segments), que
  * resume por PRECEDENCIA PURA para preservar el golden por-día. Aquel es la verdad
@@ -30,53 +43,90 @@ export interface TramoVista {
   estado: string
 }
 
+/** Resumen del día para la celda: el estado titular + si el día es parcial. */
+export interface ResumenDia {
+  estado: EstadoDisponibilidad
+  /**
+   * true si el día es MIXTO en el eje casa↔fuera: hubo fuera notable Y casa
+   * notable, sin que el fuera cubra una jornada completa. Solo aplica cuando
+   * `estado` es 'fuera' (en los estados "en casa-ish" siempre es false).
+   */
+  parcial: boolean
+}
+
 /**
- * Piso de duración (minutos) para que un estado defina el resumen del día. Debajo
- * de esto, un estado "fuera de casa" se considera marginal (aterrizaje nocturno).
- * Configurable; 3 horas por defecto.
+ * Debajo de esto, el tiempo "fuera" de un día se considera RUIDO (un aterrizaje que
+ * apenas roza la medianoche): no convierte el día en "fuera". También es el mínimo
+ * de "casa" para que un día cuente como parcial en vez de fuera-sólido.
+ */
+export const MINUTOS_RUIDO = 45
+
+/**
+ * A partir de esto, el "fuera" del día se lee como una JORNADA COMPLETA fuera →
+ * FUERA sólido, aunque quede tiempo en casa (mañana/noche). Mantiene un 9-18 como
+ * "fuera" limpio en vez de "parcial". 8 horas por defecto.
+ */
+export const MINUTOS_JORNADA_COMPLETA = 480
+
+/**
+ * Piso de duración (minutos) para que un estado "en casa-ish" (standby/blanco/en
+ * casa) defina el titular del día cuando el fuera es despreciable. 3 horas.
  */
 export const MINUTOS_PISO = 180
 
 /**
- * Estado que resume el día local `diaISO` (yyyy-mm-dd) entre los tramos dados:
- * el de mayor precedencia que supere el piso de duración. null si ningún tramo
- * (con estado conocido) solapa el día.
+ * Resume el día local `diaISO` (yyyy-mm-dd) entre los tramos dados. null si ningún
+ * tramo (con estado conocido) solapa el día. Ver la regla en la cabecera.
  */
-export function resumirDia(tramos: TramoVista[], diaISO: string): EstadoDisponibilidad | null {
+export function resumirDia(tramos: TramoVista[], diaISO: string): ResumenDia | null {
   const inicioDia = DateTime.fromISO(diaISO, { zone: TZ_LOCAL }).startOf('day')
   const a = inicioDia.toMillis()
   const b = inicioDia.plus({ days: 1 }).toMillis()
 
   const duracion = new Map<EstadoDisponibilidad, number>()
+  let totalMs = 0
   for (const t of tramos) {
     const estado = normalizarEstado(t.estado)
     if (!estado) continue
     const i = Math.max(a, DateTime.fromISO(t.inicioUtc).toMillis())
     const f = Math.min(b, DateTime.fromISO(t.finUtc).toMillis())
     if (f <= i) continue // no solapa el día
-    duracion.set(estado, (duracion.get(estado) ?? 0) + (f - i))
+    const ms = f - i
+    duracion.set(estado, (duracion.get(estado) ?? 0) + ms)
+    totalMs += ms
   }
   if (duracion.size === 0) return null
 
-  // 1. El estado de mayor precedencia que supere el piso.
-  const pisoMs = MINUTOS_PISO * 60_000
-  for (const estado of ORDEN_PRECEDENCIA) {
-    const ms = duracion.get(estado)
-    if (ms != null && ms >= pisoMs) return estado
+  const ruidoMs = MINUTOS_RUIDO * 60_000
+  const fueraMs = duracion.get('fuera') ?? 0
+
+  // Eje casa↔fuera: si el fuera pasa el ruido, el día es FUERA (sólido o parcial).
+  if (fueraMs >= ruidoMs) {
+    const casaMs = totalMs - fueraMs
+    const solido = casaMs < ruidoMs || fueraMs >= MINUTOS_JORNADA_COMPLETA * 60_000
+    return { estado: 'fuera', parcial: !solido }
   }
 
-  // 2. Ninguno alcanza el piso (día con datos parciales): dominante por duración,
-  //    empate por precedencia (orden estricto `>`).
+  // Fuera despreciable: el titular sale de los estados en-casa-ish por precedencia
+  // con piso; si ninguno lo alcanza, el más largo. 'fuera' se excluye (ya se
+  // resolvió arriba: es marginal). 'parcial' no aplica a estos estados.
+  const pisoMs = MINUTOS_PISO * 60_000
+  for (const estado of ORDEN_PRECEDENCIA) {
+    if (estado === 'fuera') continue
+    const ms = duracion.get(estado)
+    if (ms != null && ms >= pisoMs) return { estado, parcial: false }
+  }
   let mejor: EstadoDisponibilidad | null = null
   let mejorMs = 0
   for (const estado of ORDEN_PRECEDENCIA) {
+    if (estado === 'fuera') continue
     const ms = duracion.get(estado)
     if (ms != null && ms > mejorMs) {
       mejorMs = ms
       mejor = estado
     }
   }
-  return mejor
+  return mejor ? { estado: mejor, parcial: false } : null
 }
 
 /** Estado y fin del tramo que cubre el instante `nowISO`; null si ninguno lo cubre. */
