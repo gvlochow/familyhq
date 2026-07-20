@@ -139,31 +139,36 @@ export default async function HomePage() {
   const fecha = capitalizar(hoy.setLocale("es").toFormat("ccc d LLL")).replace(".", "")
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col pb-40">
-      {/* Cabecera familiar (banda navy). */}
-      <header className="rounded-b-2xl bg-primary px-6 pt-8 pb-6 text-primary-foreground">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/brand/Logo_flat.png"
-              alt="FamilyHQ"
-              width={24}
-              height={24}
-              className="rounded-md"
-              priority
-            />
-            <span className="font-heading text-sm font-semibold">
-              {hogar?.name ?? "FamilyHQ"}
-            </span>
+    <main className="flex min-h-svh w-full flex-col pb-40">
+      {/* Cabecera familiar (banda navy full-bleed). La app es una columna
+          max-w-sm centrada; sin el full-bleed, en pantallas más anchas que
+          384px el navy dejaba franjas blancas a los lados. El contenido interno
+          se alinea a la misma columna (max-w-sm) que el cuerpo. */}
+      <header className="rounded-b-2xl bg-primary text-primary-foreground">
+        <div className="mx-auto w-full max-w-sm px-6 pt-8 pb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/brand/Logo_flat.png"
+                alt="FamilyHQ"
+                width={24}
+                height={24}
+                className="rounded-md"
+                priority
+              />
+              <span className="font-heading text-sm font-semibold">
+                {hogar?.name ?? "FamilyHQ"}
+              </span>
+            </div>
+            <span className="text-sm text-primary-foreground/70">{fecha}</span>
           </div>
-          <span className="text-sm text-primary-foreground/70">{fecha}</span>
+          <h1 className="mt-4 font-heading text-2xl font-semibold">
+            ¿Cómo está la casa?
+          </h1>
         </div>
-        <h1 className="mt-4 font-heading text-2xl font-semibold">
-          ¿Cómo está la casa?
-        </h1>
       </header>
 
-      <div className="flex flex-col gap-6 px-5 pt-5">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-6 px-5 pt-5">
         {/* Estado de cada integrante. */}
         <section className="flex flex-col gap-2.5">
           {tarjetas.length > 0 ? (
