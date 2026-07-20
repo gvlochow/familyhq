@@ -2,12 +2,17 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { DateTime } from "luxon"
 import { Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, UserIcon } from "lucide-react"
 
 import { agregarIntegrante, eliminarIntegrante } from "@/app/onboarding/integrantes/actions"
 import { editarIntegrante } from "@/app/(app)/ajustes/actions"
+import { connectCalendar } from "@/app/onboarding/calendario/actions"
 import { ROLES, ROL_LABEL, type Rol } from "@/lib/members/rol"
 import { TIPOS_HORARIO, type TipoHorario } from "@/lib/members/tipo-horario"
+import type { BloqueDia } from "@/lib/members/horario-fijo"
+import { TZ_LOCAL } from "@/lib/roster/types"
+import { FixedScheduleForm } from "@/components/onboarding/fixed-schedule-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -26,14 +31,29 @@ export interface IntegranteVista {
   esTu: boolean
   /** true si es un perfil administrado (user_id null): editable/eliminable desde acá. */
   administrado: boolean
+  /** Bloques del horario fijo (si tipo='fijo'), para prellenar el editor. */
+  bloquesFijo?: BloqueDia[]
+  /** ¿Tiene conexión de calendario (si tipo='variable')? */
+  variableConectado?: boolean
+  /** Última sincronización del calendario, o null. */
+  ultimaSync?: string | null
 }
 
 /**
  * Sección Integrantes de Ajustes: lista los integrantes del hogar, permite agregar
  * perfiles administrados y editar/quitar los ya administrados. Tu propia fila (y la
  * de otras cuentas) es de solo lectura: su nombre viene de su cuenta.
+ *
+ * Un Responsable (esResponsable) puede además configurar el HORARIO de los perfiles
+ * administrados (bloques fijos o conexión de calendario) desde el editor.
  */
-export function IntegrantesSection({ integrantes }: { integrantes: IntegranteVista[] }) {
+export function IntegrantesSection({
+  integrantes,
+  esResponsable,
+}: {
+  integrantes: IntegranteVista[]
+  esResponsable: boolean
+}) {
   const router = useRouter()
   const [agregando, setAgregando] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -79,6 +99,7 @@ export function IntegrantesSection({ integrantes }: { integrantes: IntegranteVis
             <li key={m.id}>
               <EditarIntegrante
                 integrante={m}
+                esResponsable={esResponsable}
                 onCancel={() => setEditId(null)}
                 onDone={() => {
                   setEditId(null)
@@ -204,13 +225,15 @@ function AgregarIntegrante({ onCancel, onDone }: { onCancel: () => void; onDone:
   )
 }
 
-/** Edición inline de un perfil administrado (nombre + rol). */
+/** Edición inline de un perfil administrado (nombre + rol + tipo, y su horario si soy Responsable). */
 function EditarIntegrante({
   integrante,
+  esResponsable,
   onCancel,
   onDone,
 }: {
   integrante: IntegranteVista
+  esResponsable: boolean
   onCancel: () => void
   onDone: () => void
 }) {
@@ -234,21 +257,118 @@ function EditarIntegrante({
   }
 
   return (
+    <div className="flex flex-col gap-3">
+      <form
+        onSubmit={guardar}
+        className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 p-3"
+      >
+        <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoFocus disabled={pending} />
+        <Pills titulo="Rol" opciones={ROLES} label={(r) => ROL_LABEL[r as Rol]} valor={rol} onChange={(v) => setRol(v as Rol)} />
+        <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
+        <div className="flex gap-2">
+          <Button type="submit" size="sm" disabled={pending || !nombre.trim()} className="flex-1">
+            {pending ? <Loader2Icon className="size-4 animate-spin" /> : "Guardar"}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={onCancel} disabled={pending} className="flex-1">
+            Cancelar
+          </Button>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </form>
+
+      {/* Configuración del horario (solo Responsable). Se basa en el tipo GUARDADO
+          del integrante; si cambias el tipo arriba, guarda primero y reabre para
+          configurar el horario nuevo. */}
+      {esResponsable && integrante.tipo === "fijo" && (
+        <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
+          <p className="mb-2 text-sm font-medium text-foreground">
+            Horario fijo de {integrante.nombre}
+          </p>
+          <FixedScheduleForm
+            modo="ajustes"
+            memberId={integrante.id}
+            bloquesIniciales={integrante.bloquesFijo}
+            onGuardado={onDone}
+          />
+        </div>
+      )}
+
+      {esResponsable && integrante.tipo === "variable" && (
+        <ConectarCalendarioIntegrante
+          memberId={integrante.id}
+          nombre={integrante.nombre}
+          conectado={integrante.variableConectado ?? false}
+          ultimaSync={integrante.ultimaSync ?? null}
+          onDone={onDone}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Control compacto para (re)conectar el calendario de un integrante administrado. */
+function ConectarCalendarioIntegrante({
+  memberId,
+  nombre,
+  conectado,
+  ultimaSync,
+  onDone,
+}: {
+  memberId: string
+  nombre: string
+  conectado: boolean
+  ultimaSync: string | null
+  onDone: () => void
+}) {
+  const [url, setUrl] = useState("")
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setPending(true)
+    const res = await connectCalendar(url, { memberId })
+    setPending(false)
+    if (res.error) {
+      setError(res.error)
+      return
+    }
+    onDone()
+  }
+
+  return (
     <form
       onSubmit={guardar}
-      className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 p-3"
+      className="flex flex-col gap-2 rounded-xl border border-border/70 bg-muted/30 p-3"
     >
-      <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoFocus disabled={pending} />
-      <Pills titulo="Rol" opciones={ROLES} label={(r) => ROL_LABEL[r as Rol]} valor={rol} onChange={(v) => setRol(v as Rol)} />
-      <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={pending || !nombre.trim()} className="flex-1">
-          {pending ? <Loader2Icon className="size-4 animate-spin" /> : "Guardar"}
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onCancel} disabled={pending} className="flex-1">
-          Cancelar
-        </Button>
-      </div>
+      <p className="text-sm font-medium text-foreground">Calendario de {nombre}</p>
+      <p className="text-xs text-muted-foreground">
+        {conectado
+          ? ultimaSync
+            ? `Conectado. Última sincronización: ${formatoSync(ultimaSync)}.`
+            : "Conectado. Aún sin sincronizar."
+          : "Sin conectar. Pega su dirección iCal secreta."}
+      </p>
+      <Input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://calendar.google.com/…/basic.ics"
+        disabled={pending}
+      />
+      <Button type="submit" size="sm" disabled={pending || !url.trim()}>
+        {pending ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : conectado ? (
+          "Actualizar calendario"
+        ) : (
+          "Conectar calendario"
+        )}
+      </Button>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -256,6 +376,10 @@ function EditarIntegrante({
       )}
     </form>
   )
+}
+
+function formatoSync(iso: string): string {
+  return DateTime.fromISO(iso).setZone(TZ_LOCAL).setLocale("es").toFormat("d LLL, HH:mm")
 }
 
 /** Grupo de opciones segmentadas (pills). */

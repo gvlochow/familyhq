@@ -32,23 +32,35 @@ export default async function AjustesPage() {
     cargarCategorias(supabase),
   ])
 
-  // Mi horario: la conexión del rol variable y/o los bloques del horario fijo.
   const yo = (members ?? []).find((m) => m.user_id === user?.id)
-  const [{ data: conexion }, { data: filasFijo }] = yo
-    ? await Promise.all([
-        supabase
-          .from("roster_connections")
-          .select("last_synced_at")
-          .eq("member_id", yo.id)
-          .maybeSingle(),
-        supabase
-          .from("fixed_schedules")
-          .select(
-            "dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin",
-          )
-          .eq("member_id", yo.id),
-      ])
-    : [{ data: null }, { data: [] }]
+  // Solo un Responsable puede configurar el horario de los perfiles administrados.
+  const esResponsable = yo?.rol === "sostenedor"
+
+  // Horario de TODOS los integrantes del hogar (RLS acota al hogar): bloques del
+  // horario fijo + conexión del rol variable, agrupados por integrante. Sirven para
+  // "Mi horario" (uno mismo) y para que un Responsable edite el de los administrados.
+  const [{ data: filasFijoTodas }, { data: conexionesTodas }] = await Promise.all([
+    supabase
+      .from("fixed_schedules")
+      .select(
+        "member_id, dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin",
+      ),
+    supabase.from("roster_connections").select("member_id, last_synced_at"),
+  ])
+
+  const fijoPorMiembro = new Map<string, NonNullable<typeof filasFijoTodas>>()
+  for (const f of filasFijoTodas ?? []) {
+    const arr = fijoPorMiembro.get(f.member_id) ?? []
+    arr.push(f)
+    fijoPorMiembro.set(f.member_id, arr)
+  }
+  const syncPorMiembro = new Map(
+    (conexionesTodas ?? []).map((c) => [c.member_id, c.last_synced_at]),
+  )
+  const bloquesDe = (id: string) => {
+    const filas = fijoPorMiembro.get(id)
+    return filas && filas.length > 0 ? bloquesDesdeFilas(filas) : undefined
+  }
 
   const integrantes: IntegranteVista[] = (members ?? []).map((m) => ({
     id: m.id,
@@ -57,6 +69,9 @@ export default async function AjustesPage() {
     tipo: m.tipo_horario,
     esTu: m.user_id === user?.id,
     administrado: m.user_id === null,
+    bloquesFijo: bloquesDe(m.id),
+    variableConectado: syncPorMiembro.has(m.id),
+    ultimaSync: syncPorMiembro.get(m.id) ?? null,
   }))
   // Tu fila primero, luego el resto por nombre.
   integrantes.sort(
@@ -69,14 +84,14 @@ export default async function AjustesPage() {
 
       {hogar?.name && <HogarSection nombre={hogar.name} />}
 
-      <IntegrantesSection integrantes={integrantes} />
+      <IntegrantesSection integrantes={integrantes} esResponsable={esResponsable} />
 
       {yo && (
         <HorarioSection
           tipo={yo.tipo_horario}
-          variableConectado={!!conexion}
-          ultimaSync={conexion?.last_synced_at ?? null}
-          bloquesFijo={filasFijo && filasFijo.length > 0 ? bloquesDesdeFilas(filasFijo) : undefined}
+          variableConectado={syncPorMiembro.has(yo.id)}
+          ultimaSync={syncPorMiembro.get(yo.id) ?? null}
+          bloquesFijo={bloquesDe(yo.id)}
         />
       )}
 
