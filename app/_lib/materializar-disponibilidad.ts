@@ -94,6 +94,7 @@ export async function materializarDisponibilidadVariable(
   memberId: string,
   events: RosterEvent[],
   bufferLlegadaMin: number | null | undefined,
+  bufferSalidaMin: number | null | undefined,
   nowISO: string = new Date().toISOString(),
 ): Promise<boolean> {
   const ventana = ventanaMaterializacion()
@@ -102,6 +103,7 @@ export async function materializarDisponibilidadVariable(
     ventana.desde,
     ventana.hasta,
     bufferLlegadaMin ?? undefined,
+    bufferSalidaMin ?? undefined,
   )
   return escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
 }

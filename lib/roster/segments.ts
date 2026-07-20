@@ -21,6 +21,7 @@ import { buildDutyBlocks, type Dia } from './classify'
 import {
   ACTIVITY_MAP,
   DEFAULT_BUFFER_LLEGADA_MIN,
+  DEFAULT_BUFFER_SALIDA_MIN,
   Estado,
   RosterEvent,
   TZ_LOCAL,
@@ -72,6 +73,7 @@ export function construirSegmentos(
   desdeISO: string,
   hastaISO: string,
   bufferLlegadaMin: number = DEFAULT_BUFFER_LLEGADA_MIN,
+  bufferSalidaMin: number = DEFAULT_BUFFER_SALIDA_MIN,
 ): Segmento[] {
   const ventanaInicio = DateTime.fromISO(desdeISO, { zone: TZ_LOCAL }).startOf('day')
   // Fin exclusivo: medianoche local del día siguiente al último día de la ventana.
@@ -87,7 +89,7 @@ export function construirSegmentos(
   // Bloques de trabajo -> FUERA. El buffer de llegada ya está aplicado al fin del
   // bloque (buildDutyBlocks): el tramo FUERA termina en aterrizaje/debrief + buffer,
   // y ahí retoma EN_CASA. Ese es el arreglo del "aterrizaje a la 1am".
-  for (const b of buildDutyBlocks(events, bufferLlegadaMin)) {
+  for (const b of buildDutyBlocks(events, bufferLlegadaMin, bufferSalidaMin)) {
     intervalos.push({
       inicioMs: b.startUtc.toMillis(),
       finMs: b.endUtc.toMillis(),

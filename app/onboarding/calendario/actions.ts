@@ -124,7 +124,7 @@ export async function connectCalendar(
 
   const { data: member } = await supabase
     .from("members")
-    .select("buffer_llegada_min")
+    .select("buffer_llegada_min, buffer_salida_min")
     .eq("id", memberId)
     .maybeSingle()
 
@@ -141,6 +141,7 @@ export async function connectCalendar(
       memberId,
       eventosRol,
       member?.buffer_llegada_min,
+      member?.buffer_salida_min,
       nowISO,
     )
   } catch (e) {

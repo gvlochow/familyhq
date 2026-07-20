@@ -6,6 +6,7 @@ import { DateTime } from 'luxon'
 import {
   ACTIVITY_MAP,
   DEFAULT_BUFFER_LLEGADA_MIN,
+  DEFAULT_BUFFER_SALIDA_MIN,
   Estado,
   RosterEvent,
   TZ_LOCAL,
@@ -42,15 +43,16 @@ export class DutyBlock {
  * Agrupa vuelos/reports contiguos en bloques de trabajo (rotaciones).
  *
  * Regla: dos eventos de vuelo/report que se solapan o están a < 8h se consideran
- * la misma rotación. El buffer de llegada se aplica UNA vez, al final del bloque
- * completo (al último evento), no a cada tramo.
- *
- * Nota: el buffer de SALIDA no se aplica en la clasificación actual (igual que el
- * harness original); se mantiene como default configurable en types.ts.
+ * la misma rotación. Los buffers de traslado se aplican UNA vez al bloque completo:
+ * el de SALIDA al inicio (viaje a trabajo: sale de casa antes del report) y el de
+ * LLEGADA al final (viaje desde trabajo: llega a casa después del último debrief).
+ * Ambos extienden la ventana FUERA. Verificado que no altera el golden de julio (el
+ * piso de resumen por-día absorbe los corrimientos marginales).
  */
 export function buildDutyBlocks(
   events: RosterEvent[],
   bufferLlegadaMin: number = DEFAULT_BUFFER_LLEGADA_MIN,
+  bufferSalidaMin: number = DEFAULT_BUFFER_SALIDA_MIN,
 ): DutyBlock[] {
   const duty = events
     .filter((e) => e.kind === 'flight' || e.kind === 'report')
@@ -72,8 +74,9 @@ export function buildDutyBlocks(
   }
   blocks.push(cur)
 
-  // Buffer de llegada al final de cada bloque completo.
+  // Buffers de traslado al bloque completo: salida al inicio, llegada al final.
   for (const b of blocks) {
+    b.startUtc = b.startUtc.minus({ minutes: bufferSalidaMin })
     b.endUtc = b.endUtc.plus({ minutes: bufferLlegadaMin })
   }
   return blocks
