@@ -101,7 +101,7 @@ type Conexion = {
   id: string
   member_id: string
   ical_url_encrypted: string
-  members: { buffer_llegada_min: number } | null
+  members: { buffer_llegada_min: number; buffer_salida_min: number } | null
 }
 
 async function procesarVariables(
@@ -110,7 +110,9 @@ async function procesarVariables(
 ): Promise<{ actualizadas: number; errores: number }> {
   const { data: conexiones, error } = await supabase
     .from("roster_connections")
-    .select("id, member_id, ical_url_encrypted, members(buffer_llegada_min)")
+    .select(
+      "id, member_id, ical_url_encrypted, members(buffer_llegada_min, buffer_salida_min)",
+    )
 
   if (error) {
     console.error("[cron/roster] no se pudieron leer las conexiones:", error.message)
@@ -166,10 +168,11 @@ async function procesarConexion(
 
   // 3. Parseo con filtrado de privacidad (lo no-iFlight se descarta en memoria).
   const events = loadRosterEvents(ics)
-  const buffer = conexion.members?.buffer_llegada_min
+  const bufferLlegada = conexion.members?.buffer_llegada_min
+  const bufferSalida = conexion.members?.buffer_salida_min
 
   // 4. Clasificar la ventana a tramos y materializar en availability_segments.
-  const segmentos = construirSegmentos(events, desde, hasta, buffer)
+  const segmentos = construirSegmentos(events, desde, hasta, bufferLlegada, bufferSalida)
   const okSegs = await escribirSegmentos(supabase, conexion.member_id, segmentos, ventana, nowISO)
   if (!okSegs) return { estado: "error" }
 
@@ -193,6 +196,7 @@ type FilaFixed = {
   almuerza_en_casa: boolean
   hora_almuerzo_inicio: string | null
   hora_almuerzo_fin: string | null
+  members: { buffer_llegada_min: number; buffer_salida_min: number } | null
 }
 
 async function procesarFijos(
@@ -202,7 +206,7 @@ async function procesarFijos(
   const { data, error } = await supabase
     .from("fixed_schedules")
     .select(
-      "member_id, dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin, members!inner(tipo_horario)",
+      "member_id, dia_semana, hora_inicio, hora_fin, almuerza_en_casa, hora_almuerzo_inicio, hora_almuerzo_fin, members!inner(tipo_horario, buffer_llegada_min, buffer_salida_min)",
     )
     .eq("members.tipo_horario", "fijo")
 
@@ -211,11 +215,19 @@ async function procesarFijos(
     return { actualizados: 0, errores: 0 }
   }
 
-  // Agrupar las filas semanales por integrante.
-  const porMember = new Map<string, FilaHorarioFijo[]>()
+  // Agrupar las filas semanales por integrante, guardando sus buffers de traslado
+  // (iguales en las 7 filas del integrante).
+  type Grupo = { filas: FilaHorarioFijo[]; bufferLlegada?: number; bufferSalida?: number }
+  const porMember = new Map<string, Grupo>()
   for (const f of (data ?? []) as unknown as FilaFixed[]) {
-    const filas = porMember.get(f.member_id) ?? []
-    filas.push({
+    const grupo =
+      porMember.get(f.member_id) ??
+      {
+        filas: [],
+        bufferLlegada: f.members?.buffer_llegada_min,
+        bufferSalida: f.members?.buffer_salida_min,
+      }
+    grupo.filas.push({
       diaSemana: f.dia_semana,
       horaInicio: f.hora_inicio,
       horaFin: f.hora_fin,
@@ -223,14 +235,20 @@ async function procesarFijos(
       horaAlmuerzoInicio: f.hora_almuerzo_inicio,
       horaAlmuerzoFin: f.hora_almuerzo_fin,
     })
-    porMember.set(f.member_id, filas)
+    porMember.set(f.member_id, grupo)
   }
 
   const nowISO = new Date().toISOString()
   const resumen = { actualizados: 0, errores: 0 }
-  for (const [memberId, filas] of porMember) {
+  for (const [memberId, { filas, bufferLlegada, bufferSalida }] of porMember) {
     try {
-      const segmentos = construirSegmentosFijo(filas, ventana.desde, ventana.hasta)
+      const segmentos = construirSegmentosFijo(
+        filas,
+        ventana.desde,
+        ventana.hasta,
+        bufferLlegada,
+        bufferSalida,
+      )
       const ok = await escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
       if (ok) resumen.actualizados++
       else resumen.errores++

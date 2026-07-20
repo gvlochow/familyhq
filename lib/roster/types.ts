@@ -23,8 +23,8 @@ export const IFLIGHT_MARK = 'com.ibsplc.iflight.crew.mobility'
 export const TZ_LOCAL = 'America/Santiago'
 
 /** Buffers por defecto (minutos). En la app son configurables por integrante. */
-export const DEFAULT_BUFFER_SALIDA_MIN = 90 // antes del report time (reservado, ver classify.ts)
-export const DEFAULT_BUFFER_LLEGADA_MIN = 45 // después del último debrief/aterrizaje
+export const DEFAULT_BUFFER_SALIDA_MIN = 30 // viaje a trabajo (antes de entrar)
+export const DEFAULT_BUFFER_LLEGADA_MIN = 30 // viaje desde trabajo (después de salir)
 
 /** Estado familiar de un integrante en un día calendario. */
 export enum Estado {

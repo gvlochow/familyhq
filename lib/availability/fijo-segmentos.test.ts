@@ -31,14 +31,29 @@ function trabaja(
 }
 
 describe('construirSegmentosFijo', () => {
-  it('jornada 09-18 sin almuerzo: en_casa / fuera / en_casa', () => {
-    const segs = construirSegmentosFijo([trabaja(1, '09:00', '18:00')], '2026-07-06', '2026-07-06')
+  it('jornada 09-18 sin almuerzo (sin buffers): en_casa / fuera / en_casa', () => {
+    // Sin buffers de traslado (0,0): valida la expansión base de la jornada.
+    const segs = construirSegmentosFijo([trabaja(1, '09:00', '18:00')], '2026-07-06', '2026-07-06', 0, 0)
 
     expect(segs.map((s) => s.estado)).toEqual([Estado.EN_CASA, Estado.FUERA, Estado.EN_CASA])
     expect(segs[0].inicioUtc.toMillis()).toBe(ms('2026-07-06T04:00:00Z')) // 00:00 local
     expect(segs[1].inicioUtc.toMillis()).toBe(ms('2026-07-06T13:00:00Z')) // 09:00 local
     expect(segs[1].finUtc.toMillis()).toBe(ms('2026-07-06T22:00:00Z')) // 18:00 local
     expect(segs[2].finUtc.toMillis()).toBe(ms('2026-07-07T04:00:00Z')) // 24:00 local
+  })
+
+  it('los buffers de traslado extienden la jornada FUERA (salida antes, llegada después)', () => {
+    // 09-18 con salida 60 y llegada 30: "fuera" de 08:00 a 18:30 local.
+    const segs = construirSegmentosFijo(
+      [trabaja(1, '09:00', '18:00')],
+      '2026-07-06',
+      '2026-07-06',
+      30, // llegada
+      60, // salida
+    )
+    expect(segs.map((s) => s.estado)).toEqual([Estado.EN_CASA, Estado.FUERA, Estado.EN_CASA])
+    expect(segs[1].inicioUtc.toMillis()).toBe(ms('2026-07-06T12:00:00Z')) // 08:00 local (09:00 - 60)
+    expect(segs[1].finUtc.toMillis()).toBe(ms('2026-07-06T22:30:00Z')) // 18:30 local (18:00 + 30)
   })
 
   it('almuerzo en casa recorta EN_CASA dentro de la jornada', () => {
@@ -75,6 +90,8 @@ describe('construirSegmentosFijo', () => {
       [trabaja(5, '09:00', '18:00')],
       '2026-07-10', // viernes
       '2026-07-11', // sábado
+      0,
+      0,
     )
     expect(segs.map((s) => s.estado)).toEqual([Estado.EN_CASA, Estado.FUERA, Estado.EN_CASA])
     // El último EN_CASA arranca al salir del trabajo el viernes (18:00 local)...

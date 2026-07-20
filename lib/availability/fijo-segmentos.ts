@@ -13,7 +13,12 @@
  * un 09:00 local es un instante UTC distinto en invierno que en verano.
  */
 import { DateTime } from 'luxon'
-import { Estado, TZ_LOCAL } from '../roster/types'
+import {
+  DEFAULT_BUFFER_LLEGADA_MIN,
+  DEFAULT_BUFFER_SALIDA_MIN,
+  Estado,
+  TZ_LOCAL,
+} from '../roster/types'
 import { fusionar, type Segmento } from '../roster/segments'
 
 /**
@@ -41,6 +46,8 @@ export function construirSegmentosFijo(
   filas: FilaHorarioFijo[],
   desdeISO: string,
   hastaISO: string,
+  bufferLlegadaMin: number = DEFAULT_BUFFER_LLEGADA_MIN,
+  bufferSalidaMin: number = DEFAULT_BUFFER_SALIDA_MIN,
 ): Segmento[] {
   const porDia = new Map<number, FilaHorarioFijo>()
   for (const f of filas) porDia.set(f.diaSemana, f)
@@ -51,7 +58,7 @@ export function construirSegmentosFijo(
 
   const segs: Segmento[] = []
   for (let dia = desde; dia <= hasta; dia = dia.plus({ days: 1 })) {
-    segmentosDelDia(dia, porDia.get(dia.weekday), segs)
+    segmentosDelDia(dia, porDia.get(dia.weekday), segs, bufferLlegadaMin, bufferSalidaMin)
   }
 
   return fusionar(segs)
@@ -61,11 +68,18 @@ export function construirSegmentosFijo(
  * Agrega a `acc` los tramos de un solo día local. Un día libre (sin fila o sin
  * horas) es EN_CASA completo; un día de trabajo intercala FUERA en la jornada y,
  * si corresponde, EN_CASA en el almuerzo.
+ *
+ * Los buffers de traslado extienden la jornada FUERA: sale de casa `bufferSalida`
+ * antes de entrar y llega `bufferLlegada` después de salir. Se recorta al día
+ * (clamp) para no cruzar la medianoche y solapar con el día vecino (el almuerzo
+ * en casa queda dentro de la jornada, sin buffer propio — refinamiento futuro).
  */
 function segmentosDelDia(
   dia: DateTime,
   fila: FilaHorarioFijo | undefined,
   acc: Segmento[],
+  bufferLlegadaMin: number,
+  bufferSalidaMin: number,
 ): void {
   const inicioDia = dia // ya es startOf('day') en TZ_LOCAL
   const finDia = dia.plus({ days: 1 })
@@ -75,8 +89,14 @@ function segmentosDelDia(
     return
   }
 
-  const jornadaInicio = anclar(dia, fila.horaInicio)
-  const jornadaFin = anclar(dia, fila.horaFin)
+  const jornadaInicio = DateTime.max(
+    anclar(dia, fila.horaInicio).minus({ minutes: bufferSalidaMin }),
+    inicioDia,
+  )
+  const jornadaFin = DateTime.min(
+    anclar(dia, fila.horaFin).plus({ minutes: bufferLlegadaMin }),
+    finDia,
+  )
 
   // Mañana en casa antes de entrar a trabajar.
   empujar(acc, inicioDia, jornadaInicio, Estado.EN_CASA)
