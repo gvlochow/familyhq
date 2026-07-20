@@ -134,3 +134,15 @@
     @apply font-sans;
   }
 }
+
+/* Barra de progreso de navegación (components/nav/tab-bar.tsx): un bloque que
+   cruza el ancho de la pantalla mientras una tab carga. Indeterminada a propósito
+   —no sabemos el progreso real del Server Component. */
+@keyframes nav-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
