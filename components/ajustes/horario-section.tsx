@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { DateTime } from "luxon"
-import { Loader2Icon } from "lucide-react"
+import { ChevronRightIcon, Loader2Icon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { BloqueDia } from "@/lib/members/horario-fijo"
@@ -27,11 +28,14 @@ const TIPOS: { valor: "variable" | "fijo"; label: string }[] = [
  */
 export function HorarioSection({
   tipo,
+  memberId,
   variableConectado,
   ultimaSync,
   bloquesFijo,
 }: {
   tipo: string
+  /** Mi member_id, para el enlace a los buffers de traslado. */
+  memberId: string
   variableConectado: boolean
   ultimaSync: string | null
   /** Bloques guardados; undefined = sin configurar aún (el editor parte del preset L-V). */
@@ -150,6 +154,16 @@ export function HorarioSection({
             Editar mi horario fijo
           </Button>
         ))}
+
+      {(tipo === "variable" || tipo === "fijo") && (
+        <Link
+          href={`/ajustes/buffers/${memberId}`}
+          className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          <span>Buffers de traslado</span>
+          <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden />
+        </Link>
+      )}
 
       {error && (
         <p role="alert" className="text-sm text-destructive">

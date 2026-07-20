@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { resolverMemberObjetivo } from "@/app/_lib/permisos-integrante"
 import { esRol } from "@/lib/members/rol"
 import { esTipoHorario } from "@/lib/members/tipo-horario"
 import { esColorCategoria } from "@/lib/agenda/categorias"
@@ -110,6 +111,40 @@ export async function editarIntegrante(
 
   revalidatePath("/ajustes")
   revalidatePath("/")
+  return {}
+}
+
+/**
+ * Guarda los buffers de traslado (min a/desde trabajo) de un integrante. El
+ * permiso lo aplica resolverMemberObjetivo: uno mismo, o un administrado del hogar
+ * si soy Responsable. Los valores se acotan a [0, 180] en pasos de 15 (server-side,
+ * no confiar en el cliente). El recálculo de la disponibilidad lo hace el cron.
+ */
+export async function guardarBuffers(
+  memberId: string,
+  input: { salida: number; llegada: number },
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const objetivo = await resolverMemberObjetivo(supabase, memberId)
+  if ("error" in objetivo) return { error: objetivo.error }
+
+  const acotar = (n: number) =>
+    Math.max(0, Math.min(180, Math.round((Number(n) || 0) / 15) * 15))
+
+  const { data, error } = await supabase
+    .from("members")
+    .update({
+      buffer_salida_min: acotar(input.salida),
+      buffer_llegada_min: acotar(input.llegada),
+    })
+    .eq("id", objetivo.memberId)
+    .select("id")
+    .maybeSingle()
+  if (error || !data) return { error: "No se pudo guardar. Intenta de nuevo." }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/")
+  revalidatePath("/calendario")
   return {}
 }
 

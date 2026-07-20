@@ -2,8 +2,16 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { DateTime } from "luxon"
-import { Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, UserIcon } from "lucide-react"
+import {
+  ChevronRightIcon,
+  Loader2Icon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+  UserIcon,
+} from "lucide-react"
 
 import { agregarIntegrante, eliminarIntegrante } from "@/app/onboarding/integrantes/actions"
 import { editarIntegrante } from "@/app/(app)/ajustes/actions"
@@ -305,6 +313,16 @@ function EditarIntegrante({
           ultimaSync={integrante.ultimaSync ?? null}
           onDone={onDone}
         />
+      )}
+
+      {esResponsable && (integrante.tipo === "fijo" || integrante.tipo === "variable") && (
+        <Link
+          href={`/ajustes/buffers/${integrante.id}`}
+          className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          <span>Buffers de traslado</span>
+          <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden />
+        </Link>
       )}
     </div>
   )
