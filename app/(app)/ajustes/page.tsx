@@ -89,6 +89,7 @@ export default async function AjustesPage() {
       {yo && (
         <HorarioSection
           tipo={yo.tipo_horario}
+          memberId={yo.id}
           variableConectado={syncPorMiembro.has(yo.id)}
           ultimaSync={syncPorMiembro.get(yo.id) ?? null}
           bloquesFijo={bloquesDe(yo.id)}

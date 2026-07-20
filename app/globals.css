@@ -135,6 +135,15 @@
   }
 }
 
+/* Oculta el scrollbar manteniendo el scroll (rueda de buffers, etc.). */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Barra de progreso de navegación (components/nav/tab-bar.tsx): un bloque que
    cruza el ancho de la pantalla mientras una tab carga. Indeterminada a propósito
    —no sabemos el progreso real del Server Component. */
