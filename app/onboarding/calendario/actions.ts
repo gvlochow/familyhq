@@ -5,6 +5,7 @@ import { encryptSecret } from "@/lib/crypto/secret-box"
 import { loadRosterEvents, type RosterEvent } from "@/lib/roster"
 import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
 import { materializarDisponibilidadVariable } from "@/app/_lib/materializar-disponibilidad"
+import { resolverMemberObjetivo } from "@/app/_lib/permisos-integrante"
 
 type ConnectResult = { error: string | null }
 
@@ -24,10 +25,17 @@ const FETCH_TIMEOUT_MS = 12_000
  *      aparecería hasta la próxima corrida del cron (diaria) y el usuario ve
  *      "guardé y no pasó nada".
  *
+ * Con `opts.memberId` conecta el calendario de OTRO integrante (un Responsable por
+ * un perfil administrado); el permiso lo resuelve resolverMemberObjetivo. Sin él,
+ * sobre uno mismo (onboarding / "Mi horario").
+ *
  * NUNCA se persiste ni se loguea el contenido del calendario ni la URL en claro.
  * No calcula el destino: devuelve el resultado y el cliente hace router.refresh().
  */
-export async function connectCalendar(urlCruda: string): Promise<ConnectResult> {
+export async function connectCalendar(
+  urlCruda: string,
+  opts?: { memberId?: string },
+): Promise<ConnectResult> {
   const url = normalizarUrl(urlCruda)
   if (!url) {
     return {
@@ -106,16 +114,19 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     }
   }
 
-  // 3. Persistir cifrado.
-  const { data: member, error: memberError } = await supabase
-    .from("members")
-    .select("id, buffer_llegada_min")
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (memberError || !member) {
-    return { error: "No encontramos tu hogar. Intenta de nuevo." }
+  // 3. Resolver el member objetivo (uno mismo, o un administrado si un Responsable
+  //    conecta el calendario de un integrante) y persistir cifrado.
+  const objetivo = await resolverMemberObjetivo(supabase, opts?.memberId)
+  if ("error" in objetivo) {
+    return { error: objetivo.error }
   }
+  const memberId = objetivo.memberId
+
+  const { data: member } = await supabase
+    .from("members")
+    .select("buffer_llegada_min")
+    .eq("id", memberId)
+    .maybeSingle()
 
   const nowISO = new Date().toISOString()
 
@@ -127,9 +138,9 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
   try {
     sincronizado = await materializarDisponibilidadVariable(
       supabase,
-      member.id,
+      memberId,
       eventosRol,
-      member.buffer_llegada_min,
+      member?.buffer_llegada_min,
       nowISO,
     )
   } catch (e) {
@@ -142,7 +153,7 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
 
   const { error } = await supabase.from("roster_connections").upsert(
     {
-      member_id: member.id,
+      member_id: memberId,
       ical_url_encrypted: encryptSecret(url),
       // Si la materialización inmediata funcionó, sellamos el sync; si no, queda
       // null y el cron la toma en la próxima corrida.
@@ -162,7 +173,7 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
   await supabase
     .from("members")
     .update({ calendario_omitido: false })
-    .eq("id", member.id)
+    .eq("id", memberId)
 
   return { error: null }
 }

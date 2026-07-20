@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { resolverMemberObjetivo } from "@/app/_lib/permisos-integrante"
 import {
   validarBloques,
   type BloqueDia,
@@ -9,18 +10,19 @@ import {
 type SaveResult = { error: string | null }
 
 /**
- * Paso 3 (camino 'fijo'): guarda el horario fijo por día del usuario en sesión.
+ * Guarda el horario fijo por día. Sin `opts.memberId`, sobre el propio usuario
+ * (paso 3 del onboarding / "Mi horario" en Ajustes). Con `opts.memberId`, sobre un
+ * perfil administrado del hogar (un Responsable configura el horario de un
+ * integrante) — el permiso lo resuelve resolverMemberObjetivo.
  *
  * Mutación de dominio → Server Action (cliente de servidor, RLS aplica: la
  * política de fixed_schedules solo deja tocar filas de integrantes del hogar
  * propio, vía join a members). Idempotente: reguardar sobrescribe (upsert por
  * (member_id, dia_semana)).
- *
- * No calcula el destino siguiente: devuelve el resultado y el cliente hace
- * router.refresh() para que la guarda server-side reevalúe.
  */
 export async function saveHorarioFijo(
-  bloques: BloqueDia[]
+  bloques: BloqueDia[],
+  opts?: { memberId?: string },
 ): Promise<SaveResult> {
   const errorValidacion = validarBloques(bloques)
   if (errorValidacion) {
@@ -28,22 +30,9 @@ export async function saveHorarioFijo(
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
-  }
-
-  const { data: member, error: memberError } = await supabase
-    .from("members")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (memberError || !member) {
-    return { error: "No encontramos tu hogar. Intenta de nuevo." }
+  const objetivo = await resolverMemberObjetivo(supabase, opts?.memberId)
+  if ("error" in objetivo) {
+    return { error: objetivo.error }
   }
 
   // Un día sin trabajo se persiste con horas en null (así lo lee el clasificador
@@ -52,7 +41,7 @@ export async function saveHorarioFijo(
   const filas = bloques.map((b) => {
     const almuerza = b.trabaja && b.almuerzaEnCasa
     return {
-      member_id: member.id,
+      member_id: objetivo.memberId,
       dia_semana: b.dia,
       hora_inicio: b.trabaja ? b.horaInicio : null,
       hora_fin: b.trabaja ? b.horaFin : null,

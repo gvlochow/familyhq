@@ -94,6 +94,7 @@ export function FixedScheduleForm({
   modo = "onboarding",
   bloquesIniciales,
   onGuardado,
+  memberId,
 }: {
   /** "onboarding": chrome del wizard + avanza al paso siguiente. "ajustes": compacto + onGuardado. */
   modo?: "onboarding" | "ajustes"
@@ -101,6 +102,8 @@ export function FixedScheduleForm({
   bloquesIniciales?: BloqueDia[]
   /** Callback tras guardar con éxito (Ajustes hace router.refresh y cierra). */
   onGuardado?: () => void
+  /** Si se pasa, guarda el horario de OTRO integrante (Responsable → administrado). */
+  memberId?: string
 } = {}) {
   const router = useRouter()
   const panelBaseId = useId()
@@ -172,7 +175,10 @@ export function FixedScheduleForm({
     setError(null)
     setPending(true)
 
-    const { error: actionError } = await saveHorarioFijo(bloques)
+    const { error: actionError } = await saveHorarioFijo(
+      bloques,
+      memberId ? { memberId } : undefined,
+    )
     if (actionError) {
       setError(actionError)
       setPending(false)
