@@ -19,7 +19,7 @@ export function BufferWheel({
   onChange,
   min = 0,
   max = 180,
-  step = 15,
+  step = 5,
   ariaLabel,
 }: {
   value: number
@@ -68,12 +68,14 @@ export function BufferWheel({
 
   return (
     <div className="relative mx-auto h-36 w-40" role="group" aria-label={ariaLabel}>
-      {/* Caja central que enmarca la selección. */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-12 -translate-y-1/2 rounded-xl bg-card shadow-sm ring-1 ring-border/60" />
+      {/* Caja central que enmarca la selección. DETRÁS de los números (z-0): al ser
+          un elemento posicionado con fondo opaco, sin esto pintaría ENCIMA del scroll
+          (estático) y taparía el valor. */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-12 -translate-y-1/2 rounded-xl bg-card shadow-sm ring-1 ring-border/60" />
       <div
         ref={ref}
         onScroll={handleScroll}
-        className="scrollbar-none h-full snap-y snap-mandatory overflow-y-auto"
+        className="scrollbar-none relative z-10 h-full snap-y snap-mandatory overflow-y-auto"
       >
         <div style={{ height: ITEM_H }} aria-hidden />
         {valores.map((v) => (

@@ -117,7 +117,7 @@ export async function editarIntegrante(
 /**
  * Guarda los buffers de traslado (min a/desde trabajo) de un integrante. El
  * permiso lo aplica resolverMemberObjetivo: uno mismo, o un administrado del hogar
- * si soy Responsable. Los valores se acotan a [0, 180] en pasos de 15 (server-side,
+ * si soy Responsable. Los valores se acotan a [0, 180] en pasos de 5 (server-side,
  * no confiar en el cliente). El recálculo de la disponibilidad lo hace el cron.
  */
 export async function guardarBuffers(
@@ -129,7 +129,7 @@ export async function guardarBuffers(
   if ("error" in objetivo) return { error: objetivo.error }
 
   const acotar = (n: number) =>
-    Math.max(0, Math.min(180, Math.round((Number(n) || 0) / 15) * 15))
+    Math.max(0, Math.min(180, Math.round((Number(n) || 0) / 5) * 5))
 
   const { data, error } = await supabase
     .from("members")
