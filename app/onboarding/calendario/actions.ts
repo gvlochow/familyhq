@@ -156,6 +156,42 @@ export async function connectCalendar(urlCruda: string): Promise<ConnectResult> 
     return { error: "No pudimos guardar la conexión. Intenta de nuevo." }
   }
 
+  // Ya conectó de verdad: si antes había elegido "dejar para más tarde", limpiamos
+  // el flag (la conexión ya lo deja configurado por presencia, pero mantenerlo
+  // coherente evita sorpresas si más adelante se elimina la conexión).
+  await supabase
+    .from("members")
+    .update({ calendario_omitido: false })
+    .eq("id", member.id)
+
+  return { error: null }
+}
+
+/**
+ * "Dejar para más tarde": entra a la app sin conectar el calendario. Marca
+ * members.calendario_omitido para que la guarda del onboarding lo deje pasar
+ * (sin esto volvería al paso del calendario en loop). Conectará después desde
+ * Ajustes; mientras tanto su disponibilidad se ve "sin información".
+ */
+export async function omitirCalendario(): Promise<ConnectResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
+  }
+
+  const { error } = await supabase
+    .from("members")
+    .update({ calendario_omitido: true })
+    .eq("user_id", user.id)
+
+  if (error) {
+    return { error: "No pudimos guardar. Intenta de nuevo." }
+  }
+
   return { error: null }
 }
 

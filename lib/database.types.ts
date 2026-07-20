@@ -315,6 +315,7 @@ export type Database = {
         Row: {
           buffer_llegada_min: number
           buffer_salida_min: number
+          calendario_omitido: boolean
           created_at: string
           created_by_member_id: string | null
           display_name: string
@@ -328,6 +329,7 @@ export type Database = {
         Insert: {
           buffer_llegada_min?: number
           buffer_salida_min?: number
+          calendario_omitido?: boolean
           created_at?: string
           created_by_member_id?: string | null
           display_name: string
@@ -341,6 +343,7 @@ export type Database = {
         Update: {
           buffer_llegada_min?: number
           buffer_salida_min?: number
+          calendario_omitido?: boolean
           created_at?: string
           created_by_member_id?: string | null
           display_name?: string

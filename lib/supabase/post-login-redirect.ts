@@ -57,7 +57,7 @@ export async function getPostLoginRedirect(
 
   const { data, error } = await supabase
     .from("members")
-    .select("id, tipo_horario, households(onboarding_completed)")
+    .select("id, tipo_horario, calendario_omitido, households(onboarding_completed)")
     .eq("user_id", user.id)
     .maybeSingle()
 
@@ -86,7 +86,10 @@ export async function getPostLoginRedirect(
       .eq("member_id", data.id)
       .maybeSingle()
 
-    if (!conexion) {
+    // "Configurado" = conectó el calendario O eligió dejarlo para más tarde
+    // (calendario_omitido). Sin la segunda condición, omitir devolvería al mismo
+    // paso en loop. Conecta después desde Ajustes.
+    if (!conexion && !data.calendario_omitido) {
       return ONBOARDING_CALENDARIO_ROUTE
     }
   } else if (data.tipo_horario === "fijo") {
