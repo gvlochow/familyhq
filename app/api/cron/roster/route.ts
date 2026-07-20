@@ -5,16 +5,13 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { decryptSecret } from "@/lib/crypto/secret-box"
 import { loadRosterEvents } from "@/lib/roster"
 import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
-import {
-  construirSegmentos,
-  limitesVentanaUtc,
-  type Segmento,
-} from "@/lib/roster/segments"
+import { construirSegmentos, limitesVentanaUtc } from "@/lib/roster/segments"
 import { ventanaPorDefecto } from "@/lib/roster/ingest"
 import {
   construirSegmentosFijo,
   type FilaHorarioFijo,
 } from "@/lib/availability/fijo-segmentos"
+import { escribirSegmentos } from "@/app/_lib/materializar-disponibilidad"
 
 /**
  * Cron de ingesta y materialización de la disponibilidad.
@@ -246,54 +243,4 @@ async function procesarFijos(
     }
   }
   return resumen
-}
-
-// =============================================================================
-// Persistencia de tramos (compartida por ambas pasadas)
-// =============================================================================
-
-/**
- * Reemplaza los tramos de un integrante dentro de la ventana: borra los existentes
- * y reinserta los recalculados. Delete+insert (no upsert) porque la clave de un
- * tramo es su inicio_utc, que cambia entre corridas. Si el insert fallara tras el
- * delete, la ventana queda vacía hasta la próxima corrida (el cron es idempotente).
- */
-async function escribirSegmentos(
-  supabase: ReturnType<typeof createAdminClient>,
-  memberId: string,
-  segmentos: Segmento[],
-  ventana: Ventana,
-  nowISO: string,
-): Promise<boolean> {
-  const { error: delError } = await supabase
-    .from("availability_segments")
-    .delete()
-    .eq("member_id", memberId)
-    .gte("inicio_utc", ventana.inicioUtc)
-    .lt("inicio_utc", ventana.finUtc)
-
-  if (delError) {
-    console.error(`[cron/roster] member ${memberId}: borrado de tramos falló:`, delError.message)
-    return false
-  }
-
-  if (segmentos.length === 0) return true
-
-  const { error: insError } = await supabase.from("availability_segments").insert(
-    segmentos.map((s) => ({
-      member_id: memberId,
-      inicio_utc: s.inicioUtc.toISO()!,
-      fin_utc: s.finUtc.toISO()!,
-      estado: s.estado,
-      source: "clasificado" as const,
-      source_event_hash: null,
-      updated_at: nowISO,
-    })),
-  )
-
-  if (insError) {
-    console.error(`[cron/roster] member ${memberId}: insert de tramos falló:`, insError.message)
-    return false
-  }
-  return true
 }
