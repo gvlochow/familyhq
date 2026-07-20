@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
 import { resolverMemberObjetivo } from "@/app/_lib/permisos-integrante"
+import { rematerializarMiembro } from "@/app/_lib/materializar-disponibilidad"
 import { esRol } from "@/lib/members/rol"
 import { esTipoHorario } from "@/lib/members/tipo-horario"
 import { esColorCategoria } from "@/lib/agenda/categorias"
@@ -141,6 +142,17 @@ export async function guardarBuffers(
     .select("id")
     .maybeSingle()
   if (error || !data) return { error: "No se pudo guardar. Intenta de nuevo." }
+
+  // Recalcular la disponibilidad AHORA con los buffers nuevos (si no, el cambio no
+  // se vería hasta la próxima corrida del cron). No crítico: el cron es el respaldo.
+  try {
+    await rematerializarMiembro(supabase, objetivo.memberId)
+  } catch (e) {
+    console.error(
+      "[guardarBuffers] rematerialización falló:",
+      e instanceof Error ? e.message : "error desconocido",
+    )
+  }
 
   revalidatePath("/ajustes")
   revalidatePath("/")

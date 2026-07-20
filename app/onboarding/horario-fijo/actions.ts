@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { resolverMemberObjetivo } from "@/app/_lib/permisos-integrante"
+import { rematerializarMiembro } from "@/app/_lib/materializar-disponibilidad"
 import {
   validarBloques,
   type BloqueDia,
@@ -57,6 +58,17 @@ export async function saveHorarioFijo(
 
   if (error) {
     return { error: "No pudimos guardar tu horario. Intenta de nuevo." }
+  }
+
+  // Recalcular la disponibilidad AHORA (si no, el horario nuevo no se vería hasta la
+  // próxima corrida del cron). No crítico: el cron es el respaldo.
+  try {
+    await rematerializarMiembro(supabase, objetivo.memberId)
+  } catch (e) {
+    console.error(
+      "[saveHorarioFijo] rematerialización falló:",
+      e instanceof Error ? e.message : "error desconocido",
+    )
   }
 
   return { error: null }
