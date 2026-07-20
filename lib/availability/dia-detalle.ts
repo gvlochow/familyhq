@@ -74,7 +74,7 @@ export function detalleDelDia(
       id: m.id,
       inicial: m.inicial,
       nombre: m.nombre,
-      resumen: resumirDia(m.tramos, fechaISO),
+      resumen: resumirDia(m.tramos, fechaISO)?.estado ?? null,
       segmentos,
     }
   })

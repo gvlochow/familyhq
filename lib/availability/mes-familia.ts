@@ -27,6 +27,8 @@ export interface MiembroDia {
   inicial: string
   nombre: string
   estado: EstadoDisponibilidad | null
+  /** true si el día es fuera PARCIAL (mixto); ver resumirDia. */
+  parcial: boolean
 }
 
 export interface DiaMesFamilia {
@@ -69,12 +71,16 @@ export function construirGrillaMesFamilia(
       delMes,
       esHoy: fecha === hoyISO,
       miembros: delMes
-        ? miembros.map((m) => ({
-            id: m.id,
-            inicial: m.inicial,
-            nombre: m.nombre,
-            estado: resumirDia(m.tramos, fecha),
-          }))
+        ? miembros.map((m) => {
+            const r = resumirDia(m.tramos, fecha)
+            return {
+              id: m.id,
+              inicial: m.inicial,
+              nombre: m.nombre,
+              estado: r?.estado ?? null,
+              parcial: r?.parcial ?? false,
+            }
+          })
         : [],
     })
   }
