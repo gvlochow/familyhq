@@ -48,11 +48,14 @@ export function MonthGridFamily({
   miembros,
   agendaPorDia,
   onDiaClick,
+  hayVariable = true,
 }: {
   grilla: GrillaMesFamilia
   miembros: { id: string; inicial: string; nombre: string }[]
   agendaPorDia?: Record<string, AgendaItem[]>
   onDiaClick?: (fecha: string) => void
+  /** ¿Hay algún integrante variable? Si no, "Blanco" nunca ocurre y se oculta de la leyenda. */
+  hayVariable?: boolean
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -159,10 +162,12 @@ export function MonthGridFamily({
             <span className="size-3 rounded-sm bg-primary" aria-hidden />
             <span className="text-xs text-muted-foreground">Fuera</span>
           </li>
-          <li className="flex items-center gap-1.5">
-            <span className="size-3 rounded-sm bg-accent" aria-hidden />
-            <span className="text-xs text-muted-foreground">Blanco (hasta 21:00)</span>
-          </li>
+          {hayVariable && (
+            <li className="flex items-center gap-1.5">
+              <span className="size-3 rounded-sm bg-accent" aria-hidden />
+              <span className="text-xs text-muted-foreground">Blanco (hasta 21:00)</span>
+            </li>
+          )}
           <li className="flex items-center gap-1.5">
             <span className="size-3 rounded-sm bg-secondary/60" aria-hidden />
             <span className="text-xs text-muted-foreground">En casa (sin marca)</span>

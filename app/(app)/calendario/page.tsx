@@ -34,6 +34,10 @@ export default async function CalendarioPage({
     supabase.from("households").select("mostrar_categoria").limit(1).maybeSingle(),
   ])
   const integrantes = members ?? []
+  // El estado "Blanco" (por_confirmar) solo lo genera el clasificador variable;
+  // en un hogar sin ningún integrante variable nunca aparece, así que no se muestra
+  // en la leyenda (a un horario fijo no le aplica).
+  const hayVariable = integrantes.some((m) => m.tipo_horario === "variable")
 
   // Mes base: ?mes=yyyy-MM válido, o el mes actual.
   const hoy = DateTime.now().setZone(TZ_LOCAL)
@@ -147,6 +151,7 @@ export default async function CalendarioPage({
           categorias={[...categorias.values()]}
           agregadoPor={agregadoPor}
           mostrarCategoria={hogar?.mostrar_categoria ?? true}
+          hayVariable={hayVariable}
         />
       ) : (
         <p className="text-sm text-muted-foreground">
