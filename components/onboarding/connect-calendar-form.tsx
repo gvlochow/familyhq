@@ -32,10 +32,9 @@ const TOTAL_PASOS = 4
  * censurada.
  */
 const PASOS: { texto: string; imagen?: string }[] = [
-  { texto: "Abre Google Calendar en el computador." },
   {
     texto:
-      'Pasa el mouse sobre el calendario donde está tu programación, abre "Opciones" (⋮) y elige "Configuración y uso compartido".',
+      'Elige tu calendario en la lista (el que tiene tu programación) y ábrelo.',
   },
   { texto: 'Baja hasta la sección "Integrar calendario".' },
   {
@@ -204,16 +203,25 @@ export function ConnectCalendarForm({
           </summary>
 
           <div className="mt-3 flex flex-col gap-3 text-muted-foreground">
+            <a
+              href="https://calendar.google.com/calendar/u/0/r/settings"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <ExternalLinkIcon className="size-4" aria-hidden />
+              Configuración de Google Calendar
+            </a>
+
             <div className="flex items-start gap-2.5 rounded-lg border border-secondary/50 bg-secondary/15 px-3 py-2.5">
               <MonitorIcon
                 className="mt-0.5 size-4 shrink-0 text-primary"
                 aria-hidden
               />
               <p>
-                Esto se hace{" "}
-                <span className="text-foreground">en el computador</span>. Si
-                estás en el teléfono, abre el menú de tu navegador y activa la
-                opción <span className="text-foreground">Sitio de escritorio</span>.
+                El botón abre la vista de computador de Google Calendar, aunque
+                estés en el teléfono. Es normal: desde ahí copias la dirección
+                secreta.
               </p>
             </div>
 
@@ -233,16 +241,6 @@ export function ConnectCalendarForm({
                 </li>
               ))}
             </ol>
-
-            <a
-              href="https://calendar.google.com/calendar/r/settings"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <ExternalLinkIcon className="size-4" aria-hidden />
-              Abrir Google Calendar
-            </a>
           </div>
         </details>
       </div>
