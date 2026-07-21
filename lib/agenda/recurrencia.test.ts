@@ -89,4 +89,39 @@ describe('resumenRecurrencia', () => {
       'lunes, miércoles y viernes',
     )
   })
+  it('anual', () => {
+    expect(resumenRecurrencia({ tipo: 'anual', mes: 3, dia: 15 })).toBe('cada 15 de marzo')
+  })
+})
+
+describe('esRecurrencia — anual', () => {
+  it('acepta mes 1-12 y día 1-31', () => {
+    expect(esRecurrencia({ tipo: 'anual', mes: 2, dia: 29 })).toBe(true)
+  })
+  it('rechaza mes o día fuera de rango', () => {
+    expect(esRecurrencia({ tipo: 'anual', mes: 13, dia: 1 })).toBe(false)
+    expect(esRecurrencia({ tipo: 'anual', mes: 1, dia: 0 })).toBe(false)
+  })
+})
+
+describe('ocurrencias — anual', () => {
+  const anual = (mes: number, dia: number): Recurrencia => ({ tipo: 'anual', mes, dia })
+
+  it('cae una vez al año en la fecha indicada', () => {
+    const r = ocurrencias(anual(3, 15), '2026-01-01', '2026-12-31', '2026-01-01', null)
+    expect(r).toEqual(['2026-03-15'])
+  })
+  it('no aparece si la fecha queda fuera de la ventana', () => {
+    const r = ocurrencias(anual(3, 15), '2026-07-01', '2026-08-31', '2026-01-01', null)
+    expect(r).toEqual([])
+  })
+  it('el 29 de febrero cae el 28 en un año no bisiesto', () => {
+    // 2027 no es bisiesto -> 28; 2028 sí -> 29.
+    expect(ocurrencias(anual(2, 29), '2027-01-01', '2027-12-31', '2027-01-01', null)).toEqual([
+      '2027-02-28',
+    ])
+    expect(ocurrencias(anual(2, 29), '2028-01-01', '2028-12-31', '2028-01-01', null)).toEqual([
+      '2028-02-29',
+    ])
+  })
 })
