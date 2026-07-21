@@ -32,6 +32,8 @@ export interface MiembroDetalle {
   /** Resumen del día (misma regla que la celda): para el orden y el pill. */
   resumen: EstadoDisponibilidad | null
   segmentos: SegmentoDia[]
+  /** Estación donde termina el día (IATA), o null. Solo se muestra en días fuera. */
+  estacion: string | null
 }
 
 /**
@@ -76,6 +78,7 @@ export function detalleDelDia(
       nombre: m.nombre,
       resumen: resumirDia(m.tramos, fechaISO)?.estado ?? null,
       segmentos,
+      estacion: m.estaciones?.[fechaISO] ?? null,
     }
   })
 

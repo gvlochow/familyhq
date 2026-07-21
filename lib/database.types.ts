@@ -670,6 +670,35 @@ export type Database = {
           },
         ]
       }
+      roster_estaciones_dia: {
+        Row: {
+          estacion: string
+          fecha: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          estacion: string
+          fecha: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          estacion?: string
+          fecha?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_estaciones_dia_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopping_items: {
         Row: {
           added_by: string | null

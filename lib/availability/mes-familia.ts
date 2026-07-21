@@ -19,6 +19,8 @@ export interface MiembroCalendario {
   nombre: string
   inicial: string
   tramos: TramoVista[]
+  /** Estación donde termina cada día (yyyy-mm-dd -> IATA), solo variables. */
+  estaciones?: Record<string, string>
 }
 
 /** Resumen del día de un integrante (para el indicador de la celda). */
