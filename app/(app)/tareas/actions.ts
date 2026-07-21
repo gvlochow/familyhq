@@ -36,6 +36,27 @@ function resolverHoraFin(
   return { horaFin }
 }
 
+/**
+ * "afecta_disponibilidad" solo tiene sentido en un evento con ventana (hora +
+ * hora_fin) y con asignados: sin eso no hay a quién ni cuándo marcar 'fuera'. En
+ * cualquier otro caso queda false (la UI ya lo restringe; el server es defensivo).
+ */
+function resolverAfecta(
+  tipo: string,
+  hora: string | null,
+  horaFin: string | null,
+  asignados: string[],
+  pedido: boolean | undefined,
+): boolean {
+  return (
+    pedido === true &&
+    tipo === "evento" &&
+    !!hora &&
+    !!horaFin &&
+    asignados.length > 0
+  )
+}
+
 /** Miembro (id + household) del usuario autenticado, para household_id y created_by. */
 async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -110,6 +131,7 @@ export async function crearAgendaItem(input: {
   fecha: string
   hora: string | null
   horaFin?: string | null
+  afectaDisponibilidad?: boolean
   asignadoA?: string[]
   categoriaId?: string | null
 }): Promise<Resultado> {
@@ -129,6 +151,7 @@ export async function crearAgendaItem(input: {
   // Asignados: solo ids que sean integrantes del MISMO hogar (los demás se descartan).
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
   const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
+  const afecta = resolverAfecta(input.tipo, hora, rf.horaFin, asignadoA, input.afectaDisponibilidad)
 
   const { error } = await supabase.from("agenda_items").insert({
     household_id: miembro.household_id,
@@ -137,6 +160,7 @@ export async function crearAgendaItem(input: {
     fecha: input.fecha,
     hora,
     hora_fin: rf.horaFin,
+    afecta_disponibilidad: afecta,
     asignado_a: asignadoA,
     created_by: miembro.id,
     categoria_id: categoriaId,
@@ -157,6 +181,7 @@ export async function editarAgendaItem(
     fecha: string
     hora: string | null
     horaFin?: string | null
+    afectaDisponibilidad?: boolean
     asignadoA?: string[]
     categoriaId?: string | null
   },
@@ -176,10 +201,11 @@ export async function editarAgendaItem(
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
   const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
+  const afecta = resolverAfecta(input.tipo, hora, rf.horaFin, asignadoA, input.afectaDisponibilidad)
 
   const { data, error } = await supabase
     .from("agenda_items")
-    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, hora_fin: rf.horaFin, asignado_a: asignadoA, categoria_id: categoriaId })
+    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, hora_fin: rf.horaFin, afecta_disponibilidad: afecta, asignado_a: asignadoA, categoria_id: categoriaId })
     .eq("id", id)
     .select("id")
     .maybeSingle()
@@ -200,6 +226,7 @@ export async function crearActividadRecurrente(input: {
   titulo: string
   hora: string | null
   horaFin?: string | null
+  afectaDisponibilidad?: boolean
   recurrence: unknown
   asignadoA?: string[]
   fechaFin?: string | null
@@ -222,6 +249,7 @@ export async function crearActividadRecurrente(input: {
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
   const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
+  const afecta = resolverAfecta(input.tipo, hora, rf.horaFin, asignadoA, input.afectaDisponibilidad)
   const hoy = DateTime.now().setZone(TZ_LOCAL).toISODate()!
 
   const { error } = await supabase.from("recurring_activities").insert({
@@ -230,6 +258,7 @@ export async function crearActividadRecurrente(input: {
     titulo,
     hora,
     hora_fin: rf.horaFin,
+    afecta_disponibilidad: afecta,
     recurrence: input.recurrence as Json,
     asignado_a: asignadoA,
     fecha_inicio: hoy,
@@ -252,6 +281,7 @@ export async function editarActividadRecurrente(
     titulo: string
     hora: string | null
     horaFin?: string | null
+    afectaDisponibilidad?: boolean
     recurrence: unknown
     asignadoA?: string[]
     fechaFin?: string | null
@@ -275,6 +305,7 @@ export async function editarActividadRecurrente(
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
   const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
+  const afecta = resolverAfecta(input.tipo, hora, rf.horaFin, asignadoA, input.afectaDisponibilidad)
 
   const { data, error } = await supabase
     .from("recurring_activities")
@@ -283,6 +314,7 @@ export async function editarActividadRecurrente(
       titulo,
       hora,
       hora_fin: rf.horaFin,
+      afecta_disponibilidad: afecta,
       recurrence: input.recurrence as Json,
       asignado_a: asignadoA,
       fecha_fin: fechaFin,

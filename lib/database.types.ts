@@ -41,6 +41,7 @@ export type Database = {
     Tables: {
       agenda_items: {
         Row: {
+          afecta_disponibilidad: boolean
           asignado_a: string[]
           categoria_id: string | null
           completado: boolean
@@ -57,6 +58,7 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          afecta_disponibilidad?: boolean
           asignado_a?: string[]
           categoria_id?: string | null
           completado?: boolean
@@ -73,6 +75,7 @@ export type Database = {
           titulo: string
         }
         Update: {
+          afecta_disponibilidad?: boolean
           asignado_a?: string[]
           categoria_id?: string | null
           completado?: boolean
@@ -516,6 +519,7 @@ export type Database = {
       }
       recurring_activities: {
         Row: {
+          afecta_disponibilidad: boolean
           asignado_a: string[]
           categoria_id: string | null
           created_at: string
@@ -533,6 +537,7 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          afecta_disponibilidad?: boolean
           asignado_a?: string[]
           categoria_id?: string | null
           created_at?: string
@@ -550,6 +555,7 @@ export type Database = {
           titulo: string
         }
         Update: {
+          afecta_disponibilidad?: boolean
           asignado_a?: string[]
           categoria_id?: string | null
           created_at?: string

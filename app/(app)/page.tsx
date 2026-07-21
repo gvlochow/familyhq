@@ -120,7 +120,7 @@ export default async function HomePage() {
   const [{ data: agendaRaw }, categorias] = await Promise.all([
     supabase
       .from("agenda_items")
-      .select("id, tipo, titulo, fecha, hora, hora_fin, completado, asignado_a, created_by, categoria_id")
+      .select("id, tipo, titulo, fecha, hora, hora_fin, afecta_disponibilidad, completado, asignado_a, created_by, categoria_id")
       .gte("fecha", inicioVentana.toISODate()!)
       .lte("fecha", inicioVentana.plus({ days: DIAS }).toISODate()!),
     cargarCategorias(supabase),

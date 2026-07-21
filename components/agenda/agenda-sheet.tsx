@@ -71,6 +71,8 @@ export function AgendaSheet({
   const [hora, setHora] = useState(editar?.hora ?? "09:00")
   // Hora de término (solo eventos con hora). Vacío = sin término.
   const [horaFin, setHoraFin] = useState(editar?.horaFin ?? "")
+  // Opt-in: marcar 'fuera' a los asignados durante el evento.
+  const [afectaDisp, setAfectaDisp] = useState(editar?.afectaDisponibilidad ?? false)
   const [asignados, setAsignados] = useState<string[]>(
     editar?.asignados.map((a) => a.id) ?? [],
   )
@@ -93,6 +95,8 @@ export function AgendaSheet({
   // "Hasta" solo aplica a eventos con hora; si está y no es posterior al inicio, es inválida.
   const muestraHoraFin = tipo === "evento" && !todoElDia
   const horaFinInvalida = muestraHoraFin && horaFin !== "" && horaFin <= hora
+  // El opt-in de disponibilidad necesita una ventana (hora de término válida).
+  const afectaSinFin = muestraHoraFin && afectaDisp && (horaFin === "" || horaFinInvalida)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -107,6 +111,7 @@ export function AgendaSheet({
 
     const horaFinal = todoElDia ? null : hora
     const horaFinFinal = muestraHoraFin && horaFin !== "" ? horaFin : null
+    const afectaFinal = muestraHoraFin && afectaDisp
     const recurrence: Recurrencia =
       patron === "mensual"
         ? { tipo: "dia_mes", dia: diaMes }
@@ -119,6 +124,7 @@ export function AgendaSheet({
         titulo,
         hora: horaFinal,
         horaFin: horaFinFinal,
+        afectaDisponibilidad: afectaFinal,
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
@@ -131,6 +137,7 @@ export function AgendaSheet({
         fecha,
         hora: horaFinal,
         horaFin: horaFinFinal,
+        afectaDisponibilidad: afectaFinal,
         asignadoA: asignados,
         categoriaId,
       })
@@ -140,13 +147,14 @@ export function AgendaSheet({
         titulo,
         hora: horaFinal,
         horaFin: horaFinFinal,
+        afectaDisponibilidad: afectaFinal,
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
         categoriaId,
       })
     } else {
-      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, horaFin: horaFinFinal, asignadoA: asignados, categoriaId })
+      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, horaFin: horaFinFinal, afectaDisponibilidad: afectaFinal, asignadoA: asignados, categoriaId })
     }
 
     setGuardando(false)
@@ -400,6 +408,31 @@ export function AgendaSheet({
           </fieldset>
         )}
 
+        {/* Opt-in: el evento marca 'fuera' a sus asignados durante su ventana. */}
+        {muestraHoraFin && (
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={afectaDisp}
+                onChange={(e) => setAfectaDisp(e.target.checked)}
+                className="size-4 rounded border-border accent-primary"
+              />
+              Marcar “fuera” a los asignados durante el evento
+            </label>
+            {afectaDisp && (horaFin === "" || horaFinInvalida) && (
+              <p className="text-xs text-destructive">
+                Necesita una hora de término válida para definir el rango.
+              </p>
+            )}
+            {afectaDisp && asignados.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Asigna al menos un integrante para que tenga efecto.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Categoría (opcional). */}
         <CategoriaPicker categorias={categorias} value={categoriaId} onChange={setCategoriaId} />
 
@@ -411,7 +444,7 @@ export function AgendaSheet({
 
         <button
           type="submit"
-          disabled={guardando || !titulo.trim() || faltanDiasSemana || horaFinInvalida}
+          disabled={guardando || !titulo.trim() || faltanDiasSemana || horaFinInvalida || afectaSinFin}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : esEdicion ? "Guardar cambios" : "Guardar"}
