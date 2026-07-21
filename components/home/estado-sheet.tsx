@@ -15,7 +15,7 @@ import {
   type PresetFin,
 } from "@/lib/availability/estado-override"
 import { ESTADO_META } from "@/components/availability/estado-meta"
-import { actualizarMiEstado, limpiarMiEstado } from "@/app/(app)/actions"
+import { actualizarEstados, limpiarEstados } from "@/app/(app)/actions"
 import { cn } from "@/lib/utils"
 
 /** Integrante cuyo estado el usuario puede editar (él mismo o un perfil administrado). */
@@ -49,21 +49,37 @@ export function EstadoSheet({
   // desde el render server: en una PWA abierta hace rato, la hora del render sería
   // rancia y el intervalo "desde ahora" quedaría en el pasado.
   const [nowISO] = useState(() => DateTime.now().toUTC().toISO()!)
-  const [memberId, setMemberId] = useState(
-    () => (editables.find((m) => m.esTu) ?? editables[0])?.id ?? "",
+  // Multi-selección: por defecto viene marcado el propio usuario (o el primero).
+  const [memberIds, setMemberIds] = useState<Set<string>>(
+    () => new Set([(editables.find((m) => m.esTu) ?? editables[0])?.id ?? ""]),
   )
   const [estado, setEstado] = useState<EstadoOverride>("en_casa")
   const [preset, setPreset] = useState<PresetFin>("3h")
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
-  const seleccionado = editables.find((m) => m.id === memberId)
+  const seleccionados = editables.filter((m) => memberIds.has(m.id))
   const hastaTexto = useMemo(() => describirFin(preset, nowISO), [preset, nowISO])
 
-  // "Standby en casa" es un concepto de tripulación (rol variable): para un horario
-  // fijo no se ofrece. El resto de estados se pueden fijar para cualquiera.
+  function alternar(id: string) {
+    setMemberIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        if (next.size === 1) return prev // no dejar la selección vacía
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // "Standby en casa" es un concepto de tripulación (rol variable): solo se ofrece
+  // si TODOS los seleccionados son variables. El resto vale para cualquiera.
   const estadosDisponibles = ESTADOS_OVERRIDE.filter(
-    (e) => e !== "standby_casa" || seleccionado?.esVariable,
+    (e) =>
+      e !== "standby_casa" ||
+      (seleccionados.length > 0 && seleccionados.every((m) => m.esVariable)),
   )
   // Estado efectivo: si el elegido dejó de estar disponible al cambiar de integrante
   // (standby en un fijo), cae a "en casa". Derivado en el render, sin efecto.
@@ -79,11 +95,16 @@ export function EstadoSheet({
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
-    if (!memberId) return
+    if (memberIds.size === 0) return
     setGuardando(true)
     setError(null)
     const { inicioUtc, finUtc } = intervaloDesde(preset, nowISO)
-    const res = await actualizarMiEstado({ memberId, estado: estadoEfectivo, inicioUtc, finUtc })
+    const res = await actualizarEstados({
+      memberIds: [...memberIds],
+      estado: estadoEfectivo,
+      inicioUtc,
+      finUtc,
+    })
     setGuardando(false)
     if (res.error) {
       setError(res.error)
@@ -94,10 +115,10 @@ export function EstadoSheet({
   }
 
   async function volverAutomatico() {
-    if (!memberId) return
+    if (memberIds.size === 0) return
     setGuardando(true)
     setError(null)
-    const res = await limpiarMiEstado(memberId)
+    const res = await limpiarEstados([...memberIds])
     setGuardando(false)
     if (res.error) {
       setError(res.error)
@@ -139,18 +160,18 @@ export function EstadoSheet({
           </button>
         </div>
 
-        {/* Integrante (solo si el usuario administra a más de uno). */}
+        {/* Integrantes (multi-selección; solo si hay más de uno editable). */}
         {editables.length > 1 && (
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium text-foreground">¿De quién?</legend>
+            <legend className="text-sm font-medium text-foreground">¿De quiénes?</legend>
             <div className="flex flex-wrap gap-2">
               {editables.map((m) => {
-                const activo = m.id === memberId
+                const activo = memberIds.has(m.id)
                 return (
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => setMemberId(m.id)}
+                    onClick={() => alternar(m.id)}
                     aria-pressed={activo}
                     className={cn(
                       "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm transition-colors",
@@ -230,9 +251,9 @@ export function EstadoSheet({
           </div>
         </fieldset>
 
-        {seleccionado && (
+        {seleccionados.length > 0 && (
           <p className="text-sm text-muted-foreground">
-            {seleccionado.esTu ? "Estarás" : `${seleccionado.nombre} estará`}{" "}
+            {describirSujeto(seleccionados)}{" "}
             <span className="font-medium text-foreground">
               {ESTADO_META[estadoEfectivo].label.toLowerCase()}
             </span>{" "}
@@ -244,7 +265,7 @@ export function EstadoSheet({
 
         <button
           type="submit"
-          disabled={guardando || !memberId}
+          disabled={guardando || memberIds.size === 0}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar"}
@@ -261,6 +282,15 @@ export function EstadoSheet({
       </form>
     </div>
   )
+}
+
+/** Sujeto del preview según cuántos integrantes estén seleccionados. */
+function describirSujeto(sel: MiembroEditable[]): string {
+  if (sel.length === 1) {
+    const m = sel[0]
+    return m.esTu ? "Estarás" : `${m.nombre} estará`
+  }
+  return `${sel.length} integrantes estarán`
 }
 
 /** Frase de duración para el preview ("hasta las 18:00", "hasta el final del día"). */

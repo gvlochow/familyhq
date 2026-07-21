@@ -33,7 +33,7 @@ export default async function HomePage() {
   } = await supabase.auth.getUser()
 
   const [{ data: members }, { data: hogar }] = await Promise.all([
-    supabase.from("members").select("id, display_name, user_id, tipo_horario"),
+    supabase.from("members").select("id, display_name, user_id, tipo_horario, rol"),
     supabase.from("households").select("name, mostrar_categoria").limit(1).maybeSingle(),
   ])
 
@@ -100,9 +100,13 @@ export default async function HomePage() {
   const agregadoPor = yo ? yo.display_name.split(" ")[0] : null
 
   // Integrantes a los que el usuario puede editar el estado: él mismo + los perfiles
-  // administrados (sin cuenta) del hogar. NO otros titulares de cuenta.
+  // administrados (sin cuenta); si es RESPONSABLE, además cualquier integrante del
+  // hogar (incluidas otras cuentas). Tu fila primero.
+  const soyResponsable = yo?.rol === "sostenedor"
   const editables = integrantes
-    .filter((m) => m.user_id === user?.id || m.user_id === null)
+    .filter(
+      (m) => m.user_id === user?.id || m.user_id === null || soyResponsable,
+    )
     .map((m) => ({
       id: m.id,
       nombre: m.display_name.split(" ")[0],
@@ -110,6 +114,7 @@ export default async function HomePage() {
       esTu: m.user_id === user?.id,
       esVariable: m.tipo_horario === "variable",
     }))
+    .sort((a, b) => Number(b.esTu) - Number(a.esTu))
 
   // Agenda del hogar en la ventana (para el feed). RLS acota al hogar.
   const [{ data: agendaRaw }, categorias] = await Promise.all([

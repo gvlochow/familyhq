@@ -17,7 +17,7 @@ async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>)
   if (!user) return null
   const { data } = await supabase
     .from("members")
-    .select("id, household_id")
+    .select("id, household_id, rol")
     .eq("user_id", user.id)
     .maybeSingle()
   return data
@@ -25,12 +25,13 @@ async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>)
 
 /**
  * Resuelve el integrante objetivo y valida que el usuario PUEDE editar su estado:
- * su propio member o un perfil administrado (user_id null) del mismo hogar. NO otro
- * titular de cuenta. (RLS ya acota al hogar; esta es la regla de alcance encima.)
+ * su propio member, un perfil administrado (user_id null) del hogar, o —si es
+ * RESPONSABLE— cualquier integrante del hogar (incluidas otras cuentas). (RLS ya
+ * acota al hogar; esta es la regla de alcance encima.)
  */
 async function objetivoEditable(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  yo: { id: string; household_id: string },
+  yo: { id: string; household_id: string; rol: string },
   memberId: string,
 ): Promise<{ id: string } | { error: string }> {
   const { data: target } = await supabase
@@ -41,21 +42,23 @@ async function objetivoEditable(
   if (!target || target.household_id !== yo.household_id) {
     return { error: "Integrante inválido." }
   }
-  const editable = target.id === yo.id || target.user_id === null
+  const editable =
+    target.id === yo.id || target.user_id === null || yo.rol === "sostenedor"
   if (!editable) {
-    return { error: "Solo puedes cambiar tu estado o el de un perfil que administras." }
+    return { error: "No puedes cambiar el estado de ese integrante." }
   }
   return { id: target.id }
 }
 
 /**
- * Fija una corrección manual de disponibilidad (override) para un integrante, en el
- * intervalo [inicioUtc, finUtc). Preserva la invariante de no-solape: borra los
- * overrides del integrante que solapen el nuevo intervalo antes de insertar ("lo
- * último gana"). No toca availability_segments: el estado efectivo se compone al leer.
+ * Fija una corrección manual de disponibilidad (override) para UNO O VARIOS
+ * integrantes, en el intervalo [inicioUtc, finUtc). Aplica el mismo estado a todos
+ * los seleccionados. Por integrante preserva la invariante de no-solape: borra los
+ * overrides que solapen el nuevo intervalo antes de insertar ("lo último gana"). No
+ * toca availability_segments: el estado efectivo se compone al leer.
  */
-export async function actualizarMiEstado(input: {
-  memberId: string
+export async function actualizarEstados(input: {
+  memberIds: string[]
   estado: string
   inicioUtc: string
   finUtc: string
@@ -69,26 +72,37 @@ export async function actualizarMiEstado(input: {
   const fin = DateTime.fromISO(input.finUtc)
   if (!ini.isValid || !fin.isValid || fin <= ini) return { error: "Rango de tiempo inválido." }
 
-  const objetivo = await objetivoEditable(supabase, yo, input.memberId)
-  if ("error" in objetivo) return { error: objetivo.error }
+  const ids = [...new Set(input.memberIds)].filter(Boolean)
+  if (ids.length === 0) return { error: "Elige al menos un integrante." }
 
-  // No-solape: quita los overrides del integrante que se cruzan con el nuevo.
-  const { error: delError } = await supabase
-    .from("availability_overrides")
-    .delete()
-    .eq("member_id", objetivo.id)
-    .lt("inicio_utc", input.finUtc)
-    .gt("fin_utc", input.inicioUtc)
-  if (delError) return { error: "No se pudo guardar. Intenta de nuevo." }
+  const errores = await Promise.all(
+    ids.map(async (memberId) => {
+      const objetivo = await objetivoEditable(supabase, yo, memberId)
+      if ("error" in objetivo) return objetivo.error
 
-  const { error } = await supabase.from("availability_overrides").insert({
-    member_id: objetivo.id,
-    inicio_utc: input.inicioUtc,
-    fin_utc: input.finUtc,
-    estado: input.estado,
-    created_by: yo.id,
-  })
-  if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
+      // No-solape: quita los overrides del integrante que se cruzan con el nuevo.
+      const { error: delError } = await supabase
+        .from("availability_overrides")
+        .delete()
+        .eq("member_id", objetivo.id)
+        .lt("inicio_utc", input.finUtc)
+        .gt("fin_utc", input.inicioUtc)
+      if (delError) return "No se pudo guardar. Intenta de nuevo."
+
+      const { error } = await supabase.from("availability_overrides").insert({
+        member_id: objetivo.id,
+        inicio_utc: input.inicioUtc,
+        fin_utc: input.finUtc,
+        estado: input.estado,
+        created_by: yo.id,
+      })
+      if (error) return "No se pudo guardar. Intenta de nuevo."
+      return null
+    }),
+  )
+
+  const err = errores.find((e) => e !== null)
+  if (err) return { error: err }
 
   revalidatePath("/")
   revalidatePath("/calendario")
@@ -96,24 +110,36 @@ export async function actualizarMiEstado(input: {
 }
 
 /**
- * "Volver a lo automático": elimina las correcciones manuales vigentes o futuras del
- * integrante (fin_utc > ahora), para que vuelva a mandar lo clasificado. Las pasadas
- * se dejan (ya no afectan la lectura y son inofensivas).
+ * "Volver a lo automático" para uno o varios integrantes: elimina sus correcciones
+ * manuales vigentes o futuras (fin_utc > ahora), para que vuelva a mandar lo
+ * clasificado. Las pasadas se dejan (ya no afectan la lectura y son inofensivas).
  */
-export async function limpiarMiEstado(memberId: string): Promise<Resultado> {
+export async function limpiarEstados(memberIds: string[]): Promise<Resultado> {
   const supabase = await createClient()
   const yo = await miembroActual(supabase)
   if (!yo) return { error: "No perteneces a un hogar." }
 
-  const objetivo = await objetivoEditable(supabase, yo, memberId)
-  if ("error" in objetivo) return { error: objetivo.error }
+  const ids = [...new Set(memberIds)].filter(Boolean)
+  if (ids.length === 0) return { error: "Elige al menos un integrante." }
 
-  const { error } = await supabase
-    .from("availability_overrides")
-    .delete()
-    .eq("member_id", objetivo.id)
-    .gt("fin_utc", new Date().toISOString())
-  if (error) return { error: "No se pudo actualizar. Intenta de nuevo." }
+  const now = new Date().toISOString()
+  const errores = await Promise.all(
+    ids.map(async (memberId) => {
+      const objetivo = await objetivoEditable(supabase, yo, memberId)
+      if ("error" in objetivo) return objetivo.error
+
+      const { error } = await supabase
+        .from("availability_overrides")
+        .delete()
+        .eq("member_id", objetivo.id)
+        .gt("fin_utc", now)
+      if (error) return "No se pudo actualizar. Intenta de nuevo."
+      return null
+    }),
+  )
+
+  const err = errores.find((e) => e !== null)
+  if (err) return { error: err }
 
   revalidatePath("/")
   revalidatePath("/calendario")
