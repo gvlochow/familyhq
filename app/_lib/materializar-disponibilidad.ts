@@ -7,6 +7,7 @@ import {
   type Segmento,
 } from "@/lib/roster/segments"
 import { ventanaPorDefecto } from "@/lib/roster/ingest"
+import { estacionesPorDia } from "@/lib/roster/estaciones"
 import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
 import { decryptSecret } from "@/lib/crypto/secret-box"
 import {
@@ -92,6 +93,49 @@ export async function escribirSegmentos(
 }
 
 /**
+ * Reemplaza las estaciones de fin de día del integrante dentro de la ventana:
+ * borra las existentes y reinserta las derivadas de los vuelos. Solo aplica a
+ * integrantes variables (los fijos no tienen rol ni estaciones). No es crítica:
+ * si falla, es solo la nota visual "Termina en X"; no afecta la disponibilidad.
+ */
+export async function escribirEstaciones(
+  supabase: SupabaseClient,
+  memberId: string,
+  estaciones: Map<string, string>,
+  ventana: VentanaMaterializacion,
+  nowISO: string,
+): Promise<boolean> {
+  const { error: delError } = await supabase
+    .from("roster_estaciones_dia")
+    .delete()
+    .eq("member_id", memberId)
+    .gte("fecha", ventana.desde)
+    .lte("fecha", ventana.hasta)
+
+  if (delError) {
+    console.error(`[materializar] member ${memberId}: borrado de estaciones falló:`, delError.message)
+    return false
+  }
+
+  if (estaciones.size === 0) return true
+
+  const { error: insError } = await supabase.from("roster_estaciones_dia").insert(
+    [...estaciones].map(([fecha, estacion]) => ({
+      member_id: memberId,
+      fecha,
+      estacion,
+      updated_at: nowISO,
+    })),
+  )
+
+  if (insError) {
+    console.error(`[materializar] member ${memberId}: insert de estaciones falló:`, insError.message)
+    return false
+  }
+  return true
+}
+
+/**
  * Clasifica eventos de rol ya parseados a tramos sobre la ventana por defecto y los
  * materializa para un integrante. Reusa la salida del clasificador que el llamador ya
  * tiene en memoria (connectCalendar la usa para evitar un segundo fetch/parseo del
@@ -113,7 +157,14 @@ export async function materializarDisponibilidadVariable(
     bufferLlegadaMin ?? undefined,
     bufferSalidaMin ?? undefined,
   )
-  return escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
+  const okSegs = await escribirSegmentos(supabase, memberId, segmentos, ventana, nowISO)
+
+  // Estaciones de fin de día (nota visual). No crítica: si falla, no tumba la
+  // materialización de la disponibilidad.
+  const estaciones = estacionesPorDia(events, ventana.desde, ventana.hasta)
+  await escribirEstaciones(supabase, memberId, estaciones, ventana, nowISO)
+
+  return okSegs
 }
 
 /**

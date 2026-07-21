@@ -7,11 +7,15 @@ import { loadRosterEvents } from "@/lib/roster"
 import { fetchFeedSeguro } from "@/lib/roster/fetch-seguro"
 import { construirSegmentos, limitesVentanaUtc } from "@/lib/roster/segments"
 import { ventanaPorDefecto } from "@/lib/roster/ingest"
+import { estacionesPorDia } from "@/lib/roster/estaciones"
 import {
   construirSegmentosFijo,
   type FilaHorarioFijo,
 } from "@/lib/availability/fijo-segmentos"
-import { escribirSegmentos } from "@/app/_lib/materializar-disponibilidad"
+import {
+  escribirSegmentos,
+  escribirEstaciones,
+} from "@/app/_lib/materializar-disponibilidad"
 
 /**
  * Cron de ingesta y materialización de la disponibilidad.
@@ -175,6 +179,10 @@ async function procesarConexion(
   const segmentos = construirSegmentos(events, desde, hasta, bufferLlegada, bufferSalida)
   const okSegs = await escribirSegmentos(supabase, conexion.member_id, segmentos, ventana, nowISO)
   if (!okSegs) return { estado: "error" }
+
+  // Estaciones de fin de día (nota "Termina en X"). No crítica para la disponibilidad.
+  const estaciones = estacionesPorDia(events, desde, hasta)
+  await escribirEstaciones(supabase, conexion.member_id, estaciones, ventana, nowISO)
 
   await supabase
     .from("roster_connections")

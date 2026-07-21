@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { DateTime } from "luxon"
-import { CalendarIcon, CircleIcon, CircleCheckIcon, RepeatIcon, XIcon } from "lucide-react"
+import { CalendarIcon, CircleIcon, CircleCheckIcon, PlaneIcon, RepeatIcon, XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { EstadoDisponibilidad } from "@/lib/availability/estado"
@@ -118,8 +118,15 @@ export function DayDetailSheet({
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">{fraseFuera(m.segmentos)}</span>
+                  {/* Nota de aeropuerto: dónde termina el día (solo días fuera). */}
+                  {m.estacion && m.resumen && m.resumen !== "en_casa" && (
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
+                      <PlaneIcon className="size-3" aria-hidden />
+                      Termina en {m.estacion}
+                    </span>
+                  )}
                 </div>
               </li>
             )

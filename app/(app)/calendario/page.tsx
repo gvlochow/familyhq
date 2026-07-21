@@ -57,11 +57,29 @@ export default async function CalendarioPage({
     winFinUtc,
   )
 
+  // Estaciones de fin de día (nota "Termina en X") del rango visible, por integrante.
+  const desdeEst = base.startOf("month").minus({ days: 7 }).toISODate()!
+  const hastaEst = base.endOf("month").plus({ days: 8 }).toISODate()!
+  const { data: estacionesRaw } = integrantes.length
+    ? await supabase
+        .from("roster_estaciones_dia")
+        .select("member_id, fecha, estacion")
+        .gte("fecha", desdeEst)
+        .lte("fecha", hastaEst)
+    : { data: [] }
+  const estacionesPorMiembro = new Map<string, Record<string, string>>()
+  for (const e of estacionesRaw ?? []) {
+    const mapa = estacionesPorMiembro.get(e.member_id) ?? {}
+    mapa[e.fecha] = e.estacion
+    estacionesPorMiembro.set(e.member_id, mapa)
+  }
+
   const miembros: MiembroCalendario[] = integrantes.map((m) => ({
     id: m.id,
     nombre: m.display_name.split(" ")[0],
     inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
     tramos: tramosPorMiembro.get(m.id) ?? [],
+    estaciones: estacionesPorMiembro.get(m.id),
   }))
 
   const grilla = construirGrillaMesFamilia(miembros, base.toFormat("yyyy-MM"), hoy.toISODate()!)
