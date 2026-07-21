@@ -9,13 +9,14 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { OnboardingBackLink } from "@/components/onboarding/onboarding-back-link"
 
 // El onboarding tiene 3 pasos; la cuenta ya está creada, así que arrancamos en
 // el paso 1 (no en 0%) — ver DESIGN.md ("no empieza en 0% si ya hubo pasos").
 const PASO_ACTUAL = 1
 const TOTAL_PASOS = 4
 
-export function CreateHouseholdForm() {
+export function CreateHouseholdForm({ backHref }: { backHref?: string }) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -68,6 +69,7 @@ export function CreateHouseholdForm() {
     >
       {/* Encabezado: marca discreta + progreso del onboarding. */}
       <header className="flex flex-col gap-5">
+        {backHref && <OnboardingBackLink href={backHref} />}
         <div className="flex items-center justify-center gap-2">
           <Image
             src="/brand/Logo_flat.png"

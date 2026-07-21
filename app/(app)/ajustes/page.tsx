@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server"
 import { bloquesDesdeFilas } from "@/lib/members/horario-fijo"
 import { Button } from "@/components/ui/button"
 import { HogarSection } from "@/components/ajustes/hogar-section"
+import { EntradaHogarSection } from "@/components/ajustes/entrada-hogar-section"
+import { SolicitudesSection } from "@/components/ajustes/solicitudes-section"
 import {
   IntegrantesSection,
   type IntegranteVista,
@@ -27,7 +29,11 @@ export default async function AjustesPage() {
   } = await supabase.auth.getUser()
 
   const [{ data: hogar }, { data: members }, categorias] = await Promise.all([
-    supabase.from("households").select("name, mostrar_categoria").limit(1).maybeSingle(),
+    supabase
+      .from("households")
+      .select("name, mostrar_categoria, join_code")
+      .limit(1)
+      .maybeSingle(),
     supabase.from("members").select("id, display_name, user_id, rol, tipo_horario"),
     cargarCategorias(supabase),
   ])
@@ -35,6 +41,36 @@ export default async function AjustesPage() {
   const yo = (members ?? []).find((m) => m.user_id === user?.id)
   // Solo un Responsable puede configurar el horario de los perfiles administrados.
   const esResponsable = yo?.rol === "sostenedor"
+
+  // Perfiles administrados (sin cuenta): candidatos para vincular al aprobar una
+  // solicitud o invitar por correo.
+  const administrados = (members ?? [])
+    .filter((m) => m.user_id === null)
+    .map((m) => ({ id: m.id, nombre: m.display_name }))
+
+  // Entrada al hogar (grupo 3): solicitudes e invitaciones pendientes. La gestión
+  // es solo de Responsables, así que solo se cargan para ellos.
+  const [{ data: solicitudesRaw }, { data: invitacionesRaw }] = esResponsable
+    ? await Promise.all([
+        supabase
+          .from("household_join_requests")
+          .select("id, solicitante_nombre, solicitante_email, created_at")
+          .eq("status", "pendiente")
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("household_invites")
+          .select("id, email, created_at")
+          .eq("status", "pendiente")
+          .order("created_at", { ascending: true }),
+      ])
+    : [{ data: null }, { data: null }]
+
+  const solicitudes = (solicitudesRaw ?? []).map((s) => ({
+    id: s.id,
+    nombre: s.solicitante_nombre ?? "Alguien",
+    email: s.solicitante_email,
+  }))
+  const invitaciones = (invitacionesRaw ?? []).map((i) => ({ id: i.id, email: i.email }))
 
   // Horario de TODOS los integrantes del hogar (RLS acota al hogar): bloques del
   // horario fijo + conexión del rol variable, agrupados por integrante. Sirven para
@@ -83,6 +119,19 @@ export default async function AjustesPage() {
       <h1 className="font-heading text-2xl font-semibold text-foreground">Ajustes</h1>
 
       {hogar?.name && <HogarSection nombre={hogar.name} />}
+
+      {hogar?.join_code && (
+        <EntradaHogarSection
+          codigo={hogar.join_code}
+          esResponsable={esResponsable}
+          administrados={administrados}
+          invitaciones={invitaciones}
+        />
+      )}
+
+      {esResponsable && (
+        <SolicitudesSection solicitudes={solicitudes} administrados={administrados} />
+      )}
 
       <IntegrantesSection integrantes={integrantes} esResponsable={esResponsable} />
 
