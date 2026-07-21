@@ -26,7 +26,12 @@ import { cn } from "@/lib/utils"
 const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" }
 
 /** Patrón de repetición elegible en el formulario. */
-type Patron = "mensual" | "semanal"
+type Patron = "mensual" | "semanal" | "anual"
+
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
 /** Días de la semana en orden lunes→domingo (ISO 1..7) con su inicial. */
 const DIAS_SEMANA: { iso: number; letra: string }[] = [
   { iso: 1, letra: "L" },
@@ -79,9 +84,14 @@ export function AgendaSheet({
   const [categoriaId, setCategoriaId] = useState<string | null>(editar?.categoria?.id ?? null)
   // Recurrencia. En edición, el tipo (puntual/recurrente) queda fijo: no se ofrece el toggle.
   const [repite, setRepite] = useState(editar?.recurrente ?? false)
-  const [patron, setPatron] = useState<Patron>(rec?.tipo === "dias_semana" ? "semanal" : "mensual")
+  const [patron, setPatron] = useState<Patron>(
+    rec?.tipo === "dias_semana" ? "semanal" : rec?.tipo === "anual" ? "anual" : "mensual",
+  )
   const [diaMes, setDiaMes] = useState(rec?.tipo === "dia_mes" ? rec.dia : 1)
   const [diasSemana, setDiasSemana] = useState<number[]>(rec?.tipo === "dias_semana" ? rec.dias : [])
+  const ahoraLocal = DateTime.now().setZone(TZ_LOCAL)
+  const [mesAnio, setMesAnio] = useState(rec?.tipo === "anual" ? rec.mes : ahoraLocal.month)
+  const [diaAnio, setDiaAnio] = useState(rec?.tipo === "anual" ? rec.dia : ahoraLocal.day)
   const [fechaFin, setFechaFin] = useState(editar?.recurrenteFechaFin ?? "")
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
@@ -115,7 +125,9 @@ export function AgendaSheet({
     const recurrence: Recurrencia =
       patron === "mensual"
         ? { tipo: "dia_mes", dia: diaMes }
-        : { tipo: "dias_semana", dias: diasSemana }
+        : patron === "anual"
+          ? { tipo: "anual", mes: mesAnio, dia: diaAnio }
+          : { tipo: "dias_semana", dias: diasSemana }
 
     let res: { error?: string }
     if (esEdicion && editar!.recurrente && editar!.recurrenteId) {
@@ -251,25 +263,52 @@ export function AgendaSheet({
           <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
             <fieldset className="flex gap-2">
               <legend className="sr-only">Cada cuánto</legend>
-              {(["mensual", "semanal"] as const).map((p) => (
+              {(["mensual", "semanal", "anual"] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setPatron(p)}
                   aria-pressed={patron === p}
                   className={cn(
-                    "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                    "flex-1 rounded-lg border px-2 py-2 text-sm font-medium transition-colors",
                     patron === p
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border bg-background text-muted-foreground hover:bg-muted",
                   )}
                 >
-                  {p === "mensual" ? "Cada mes" : "Cada semana"}
+                  {p === "mensual" ? "Cada mes" : p === "semanal" ? "Cada semana" : "Cada año"}
                 </button>
               ))}
             </fieldset>
 
-            {patron === "mensual" ? (
+            {patron === "anual" ? (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="font-medium text-foreground">Fecha</span>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    aria-label="Día"
+                    value={diaAnio}
+                    onChange={(e) => setDiaAnio(Math.min(31, Math.max(1, Number(e.target.value) || 1)))}
+                    className="w-16 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <select
+                    aria-label="Mes"
+                    value={mesAnio}
+                    onChange={(e) => setMesAnio(Number(e.target.value))}
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {MESES.map((nombre, i) => (
+                      <option key={i} value={i + 1}>
+                        {nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : patron === "mensual" ? (
               <label className="flex items-center justify-between gap-2 text-sm">
                 <span className="font-medium text-foreground">Día del mes</span>
                 <input
