@@ -21,6 +21,7 @@ function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
     titulo: 'Cuenta de luz',
     hora: null,
     hora_fin: null,
+    afecta_disponibilidad: false,
     recurrence: { tipo: 'dia_mes', dia: 5 },
     asignado_a: ['m1'],
     fecha_inicio: '2026-01-01',
@@ -100,7 +101,7 @@ describe('expandirRecurrentes', () => {
 
 describe('proximaPorRegla', () => {
   function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
-    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, horaFin: null, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
   }
 
   it('deja una fila por regla: su ocurrencia más temprana', () => {

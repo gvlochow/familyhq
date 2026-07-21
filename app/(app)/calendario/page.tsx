@@ -81,7 +81,7 @@ export default async function CalendarioPage({
   const { data: agendaRaw } = integrantes.length
     ? await supabase
         .from("agenda_items")
-        .select("id, tipo, titulo, fecha, hora, hora_fin, completado, asignado_a, created_by, categoria_id")
+        .select("id, tipo, titulo, fecha, hora, hora_fin, afecta_disponibilidad, completado, asignado_a, created_by, categoria_id")
         .gte("fecha", desdeAgenda)
         .lte("fecha", hastaAgenda)
     : { data: [] }

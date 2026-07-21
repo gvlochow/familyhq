@@ -66,4 +66,27 @@ describe('componerTramosPorMiembro', () => {
     const r = componerTramosPorMiembro(miembros, [], [], WIN_INI, WIN_FIN)
     expect(r.get('a')).toEqual([])
   })
+
+  it('precedencia: override manual > evento > clasificado/default', () => {
+    const miembros = [{ id: 'k', tipo_horario: 'ninguno' }]
+    // base = en_casa toda la ventana. Evento 'fuera' 15-18; override 'en_casa' 16-18.
+    const eventos = new Map([
+      ['k', [{ inicioUtc: '2026-07-14T15:00:00Z', finUtc: '2026-07-14T18:00:00Z', estado: 'fuera' }]],
+    ])
+    const ovs = [ov('k', '2026-07-14T16:00:00Z', '2026-07-14T18:00:00Z', 'en_casa')]
+    const r = componerTramosPorMiembro(miembros, [], ovs, WIN_INI, WIN_FIN, eventos)
+    expect(r.get('k')).toEqual([
+      { inicioUtc: '2026-07-14T04:00:00.000Z', finUtc: '2026-07-14T15:00:00.000Z', estado: 'en_casa' },
+      { inicioUtc: '2026-07-14T15:00:00.000Z', finUtc: '2026-07-14T16:00:00.000Z', estado: 'fuera' },
+      { inicioUtc: '2026-07-14T16:00:00.000Z', finUtc: '2026-07-21T04:00:00.000Z', estado: 'en_casa' },
+    ])
+  })
+
+  it('capa de eventos vacía no cambia el resultado histórico', () => {
+    const miembros = [{ id: 'a', tipo_horario: 'variable' }]
+    const segs = [seg('a', '2026-07-14T12:00:00Z', '2026-07-14T21:00:00Z', 'fuera')]
+    const sinEventos = componerTramosPorMiembro(miembros, segs, [], WIN_INI, WIN_FIN)
+    const conMapaVacio = componerTramosPorMiembro(miembros, segs, [], WIN_INI, WIN_FIN, new Map())
+    expect(conMapaVacio.get('a')).toEqual(sinEventos.get('a'))
+  })
 })
