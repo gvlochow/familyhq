@@ -18,6 +18,24 @@ type Resultado = { error?: string }
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d$/
 
+/**
+ * Normaliza la hora de término de un evento. Solo aplica a tipo 'evento' con hora
+ * de inicio; debe ser posterior al inicio. En cualquier otro caso queda null
+ * (tareas, eventos de todo el día). La comparación lexicográfica de "HH:MM" es
+ * correcta por el formato fijo de dos dígitos.
+ */
+function resolverHoraFin(
+  tipo: string,
+  hora: string | null,
+  horaFinRaw: string | null | undefined,
+): { horaFin: string | null } | { error: string } {
+  const horaFin = horaFinRaw?.trim() ? horaFinRaw.trim() : null
+  if (!horaFin || tipo !== "evento" || !hora) return { horaFin: null }
+  if (!RE_HORA.test(horaFin)) return { error: "Hora de término inválida (HH:MM)." }
+  if (horaFin <= hora) return { error: "La hora de término debe ser posterior al inicio." }
+  return { horaFin }
+}
+
 /** Miembro (id + household) del usuario autenticado, para household_id y created_by. */
 async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -91,6 +109,7 @@ export async function crearAgendaItem(input: {
   titulo: string
   fecha: string
   hora: string | null
+  horaFin?: string | null
   asignadoA?: string[]
   categoriaId?: string | null
 }): Promise<Resultado> {
@@ -104,6 +123,8 @@ export async function crearAgendaItem(input: {
   if (!RE_FECHA.test(input.fecha)) return { error: "Elige una fecha." }
   const hora = input.hora?.trim() ? input.hora.trim() : null
   if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+  const rf = resolverHoraFin(input.tipo, hora, input.horaFin)
+  if ("error" in rf) return { error: rf.error }
 
   // Asignados: solo ids que sean integrantes del MISMO hogar (los demás se descartan).
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
@@ -115,6 +136,7 @@ export async function crearAgendaItem(input: {
     titulo,
     fecha: input.fecha,
     hora,
+    hora_fin: rf.horaFin,
     asignado_a: asignadoA,
     created_by: miembro.id,
     categoria_id: categoriaId,
@@ -134,6 +156,7 @@ export async function editarAgendaItem(
     titulo: string
     fecha: string
     hora: string | null
+    horaFin?: string | null
     asignadoA?: string[]
     categoriaId?: string | null
   },
@@ -148,13 +171,15 @@ export async function editarAgendaItem(
   if (!RE_FECHA.test(input.fecha)) return { error: "Elige una fecha." }
   const hora = input.hora?.trim() ? input.hora.trim() : null
   if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+  const rf = resolverHoraFin(input.tipo, hora, input.horaFin)
+  if ("error" in rf) return { error: rf.error }
 
   const asignadoA = await asignadosDelHogar(supabase, miembro.household_id, input.asignadoA)
   const categoriaId = await categoriaValida(supabase, miembro.household_id, input.categoriaId)
 
   const { data, error } = await supabase
     .from("agenda_items")
-    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, asignado_a: asignadoA, categoria_id: categoriaId })
+    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, hora_fin: rf.horaFin, asignado_a: asignadoA, categoria_id: categoriaId })
     .eq("id", id)
     .select("id")
     .maybeSingle()
@@ -174,6 +199,7 @@ export async function crearActividadRecurrente(input: {
   tipo: string
   titulo: string
   hora: string | null
+  horaFin?: string | null
   recurrence: unknown
   asignadoA?: string[]
   fechaFin?: string | null
@@ -189,6 +215,8 @@ export async function crearActividadRecurrente(input: {
   if (!esRecurrencia(input.recurrence)) return { error: "Elige cuándo se repite." }
   const hora = input.hora?.trim() ? input.hora.trim() : null
   if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+  const rf = resolverHoraFin(input.tipo, hora, input.horaFin)
+  if ("error" in rf) return { error: rf.error }
   const fechaFin = input.fechaFin?.trim() ? input.fechaFin.trim() : null
   if (fechaFin && !RE_FECHA.test(fechaFin)) return { error: "Fecha de término inválida." }
 
@@ -201,6 +229,7 @@ export async function crearActividadRecurrente(input: {
     tipo: input.tipo,
     titulo,
     hora,
+    hora_fin: rf.horaFin,
     recurrence: input.recurrence as Json,
     asignado_a: asignadoA,
     fecha_inicio: hoy,
@@ -222,6 +251,7 @@ export async function editarActividadRecurrente(
     tipo: string
     titulo: string
     hora: string | null
+    horaFin?: string | null
     recurrence: unknown
     asignadoA?: string[]
     fechaFin?: string | null
@@ -238,6 +268,8 @@ export async function editarActividadRecurrente(
   if (!esRecurrencia(input.recurrence)) return { error: "Elige cuándo se repite." }
   const hora = input.hora?.trim() ? input.hora.trim() : null
   if (hora && !RE_HORA.test(hora)) return { error: "Hora inválida (HH:MM)." }
+  const rf = resolverHoraFin(input.tipo, hora, input.horaFin)
+  if ("error" in rf) return { error: rf.error }
   const fechaFin = input.fechaFin?.trim() ? input.fechaFin.trim() : null
   if (fechaFin && !RE_FECHA.test(fechaFin)) return { error: "Fecha de término inválida." }
 
@@ -250,6 +282,7 @@ export async function editarActividadRecurrente(
       tipo: input.tipo,
       titulo,
       hora,
+      hora_fin: rf.horaFin,
       recurrence: input.recurrence as Json,
       asignado_a: asignadoA,
       fecha_fin: fechaFin,

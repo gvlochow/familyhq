@@ -209,7 +209,7 @@ function AgendaFila({
               <span className="text-muted-foreground/50">·</span>
             </>
           )}
-          {item.hora ?? "Todo el día"}
+          {item.hora ? (item.horaFin ? `${item.hora}–${item.horaFin}` : item.hora) : "Todo el día"}
           {item.recurrente && item.recurrenciaResumen && (
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>
           )}

@@ -20,6 +20,7 @@ function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
     tipo: 'tarea',
     titulo: 'Cuenta de luz',
     hora: null,
+    hora_fin: null,
     recurrence: { tipo: 'dia_mes', dia: 5 },
     asignado_a: ['m1'],
     fecha_inicio: '2026-01-01',
@@ -71,6 +72,16 @@ describe('expandirRecurrentes', () => {
     expect(items[0].hora).toBe('19:30')
   })
 
+  it('propaga la hora de término recortada (hora_fin -> horaFin), null si no tiene', () => {
+    const con = expandirRecurrentes(
+      [regla({ tipo: 'evento', hora: '19:30:00', hora_fin: '21:00:00' })],
+      new Set(), '2026-07-01', '2026-07-31', miembros, cats,
+    )
+    expect(con[0].horaFin).toBe('21:00')
+    const sin = expandirRecurrentes([regla({ hora: '19:30:00' })], new Set(), '2026-07-01', '2026-07-31', miembros, cats)
+    expect(sin[0].horaFin).toBeNull()
+  })
+
   it('descarta reglas con tipo o recurrence inválidos', () => {
     const malas = [
       regla({ id: 'x', tipo: 'inventado' }),
@@ -89,7 +100,7 @@ describe('expandirRecurrentes', () => {
 
 describe('proximaPorRegla', () => {
   function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
-    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, horaFin: null, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
   }
 
   it('deja una fila por regla: su ocurrencia más temprana', () => {

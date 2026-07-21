@@ -50,6 +50,7 @@ export type Database = {
           created_by: string | null
           fecha: string
           hora: string | null
+          hora_fin: string | null
           household_id: string
           id: string
           tipo: string
@@ -65,6 +66,7 @@ export type Database = {
           created_by?: string | null
           fecha: string
           hora?: string | null
+          hora_fin?: string | null
           household_id: string
           id?: string
           tipo: string
@@ -80,6 +82,7 @@ export type Database = {
           created_by?: string | null
           fecha?: string
           hora?: string | null
+          hora_fin?: string | null
           household_id?: string
           id?: string
           tipo?: string
@@ -520,6 +523,7 @@ export type Database = {
           fecha_fin: string | null
           fecha_inicio: string
           hora: string | null
+          hora_fin: string | null
           household_id: string
           id: string
           payment_link: string | null
@@ -536,6 +540,7 @@ export type Database = {
           fecha_fin?: string | null
           fecha_inicio?: string
           hora?: string | null
+          hora_fin?: string | null
           household_id: string
           id?: string
           payment_link?: string | null
@@ -552,6 +557,7 @@ export type Database = {
           fecha_fin?: string | null
           fecha_inicio?: string
           hora?: string | null
+          hora_fin?: string | null
           household_id?: string
           id?: string
           payment_link?: string | null

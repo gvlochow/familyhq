@@ -22,7 +22,7 @@ export async function cargarAgendaRecurrente(
   const { data: reglas } = await supabase
     .from("recurring_activities")
     .select(
-      "id, tipo, titulo, hora, recurrence, asignado_a, fecha_inicio, fecha_fin, created_by, categoria_id",
+      "id, tipo, titulo, hora, hora_fin, recurrence, asignado_a, fecha_inicio, fecha_fin, created_by, categoria_id",
     )
 
   if (!reglas?.length) return []
