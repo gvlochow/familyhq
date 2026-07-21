@@ -17,6 +17,7 @@ export interface ReglaRecurrenteDB {
   tipo: string
   titulo: string
   hora: string | null
+  hora_fin: string | null
   recurrence: unknown
   asignado_a: string[] | null
   fecha_inicio: string
@@ -52,6 +53,7 @@ export function expandirRecurrentes(
     if (!esTipoAgenda(regla.tipo) || !esRecurrencia(regla.recurrence)) continue
     const resumen = resumenRecurrencia(regla.recurrence)
     const hora = regla.hora ? regla.hora.slice(0, 5) : null
+    const horaFin = regla.hora_fin ? regla.hora_fin.slice(0, 5) : null
     const asignados = (regla.asignado_a ?? [])
       .map((id) => miembros.get(id))
       .filter((m): m is MiembroRef => m !== undefined)
@@ -65,6 +67,7 @@ export function expandirRecurrentes(
         titulo: regla.titulo,
         fecha,
         hora,
+        horaFin,
         completado: completadas.has(`${regla.id}:${fecha}`),
         asignados,
         agregadoPor,

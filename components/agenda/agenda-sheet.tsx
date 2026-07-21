@@ -69,6 +69,8 @@ export function AgendaSheet({
   )
   const [todoElDia, setTodoElDia] = useState(editar ? editar.hora === null : true)
   const [hora, setHora] = useState(editar?.hora ?? "09:00")
+  // Hora de término (solo eventos con hora). Vacío = sin término.
+  const [horaFin, setHoraFin] = useState(editar?.horaFin ?? "")
   const [asignados, setAsignados] = useState<string[]>(
     editar?.asignados.map((a) => a.id) ?? [],
   )
@@ -88,6 +90,9 @@ export function AgendaSheet({
     setDiasSemana((prev) => (prev.includes(iso) ? prev.filter((x) => x !== iso) : [...prev, iso]))
 
   const faltanDiasSemana = repite && patron === "semanal" && diasSemana.length === 0
+  // "Hasta" solo aplica a eventos con hora; si está y no es posterior al inicio, es inválida.
+  const muestraHoraFin = tipo === "evento" && !todoElDia
+  const horaFinInvalida = muestraHoraFin && horaFin !== "" && horaFin <= hora
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -101,6 +106,7 @@ export function AgendaSheet({
     setError(null)
 
     const horaFinal = todoElDia ? null : hora
+    const horaFinFinal = muestraHoraFin && horaFin !== "" ? horaFin : null
     const recurrence: Recurrencia =
       patron === "mensual"
         ? { tipo: "dia_mes", dia: diaMes }
@@ -112,6 +118,7 @@ export function AgendaSheet({
         tipo,
         titulo,
         hora: horaFinal,
+        horaFin: horaFinFinal,
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
@@ -123,6 +130,7 @@ export function AgendaSheet({
         titulo,
         fecha,
         hora: horaFinal,
+        horaFin: horaFinFinal,
         asignadoA: asignados,
         categoriaId,
       })
@@ -131,13 +139,14 @@ export function AgendaSheet({
         tipo,
         titulo,
         hora: horaFinal,
+        horaFin: horaFinFinal,
         recurrence,
         asignadoA: asignados,
         fechaFin: fechaFin || null,
         categoriaId,
       })
     } else {
-      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, asignadoA: asignados, categoriaId })
+      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, horaFin: horaFinFinal, asignadoA: asignados, categoriaId })
     }
 
     setGuardando(false)
@@ -317,15 +326,42 @@ export function AgendaSheet({
         </label>
 
         {!todoElDia && (
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-foreground">Hora</span>
-            <input
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-sm font-medium text-foreground">
+                {muestraHoraFin ? "Desde" : "Hora"}
+              </span>
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </label>
+            {muestraHoraFin && (
+              <label className="flex flex-1 flex-col gap-1">
+                <span className="text-sm font-medium text-foreground">
+                  Hasta <span className="text-muted-foreground">(opcional)</span>
+                </span>
+                <input
+                  type="time"
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                  aria-invalid={horaFinInvalida}
+                  className={cn(
+                    "rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring",
+                    horaFinInvalida ? "border-destructive" : "border-border",
+                  )}
+                />
+              </label>
+            )}
+          </div>
+        )}
+
+        {horaFinInvalida && (
+          <p className="text-sm text-destructive">
+            La hora de término debe ser posterior al inicio.
+          </p>
         )}
 
         {/* Asignar a integrantes (opcional). */}
@@ -375,7 +411,7 @@ export function AgendaSheet({
 
         <button
           type="submit"
-          disabled={guardando || !titulo.trim() || faltanDiasSemana}
+          disabled={guardando || !titulo.trim() || faltanDiasSemana || horaFinInvalida}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : esEdicion ? "Guardar cambios" : "Guardar"}

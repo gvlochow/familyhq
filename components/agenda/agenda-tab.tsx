@@ -160,7 +160,12 @@ function Fila({
   onBorrar: (i: AgendaItem) => void
 }) {
   const esTarea = item.tipo === "tarea"
-  const etiqueta = etiquetaCuando(cuandoISO(item), nowISO, item.hora !== null)
+  let etiqueta = etiquetaCuando(cuandoISO(item), nowISO, item.hora !== null)
+  // Evento con término: muestra el rango cuando la etiqueta ya incluye la hora de
+  // inicio (fechas cercanas; en las lejanas se lee solo la fecha, sin hora).
+  if (!esTarea && item.horaFin && item.hora && etiqueta.endsWith(item.hora)) {
+    etiqueta = `${etiqueta}–${item.horaFin}`
+  }
   const cuando = esTarea ? `Vence ${etiqueta.toLowerCase()}` : etiqueta
 
   return (

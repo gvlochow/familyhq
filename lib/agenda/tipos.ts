@@ -32,6 +32,8 @@ export interface AgendaItem {
   fecha: string
   /** "HH:MM" o null (todo el día / sin hora). */
   hora: string | null
+  /** "HH:MM" o null. Hora de término (solo eventos con hora); null si no aplica. */
+  horaFin: string | null
   completado: boolean
   /** Integrantes asignados, ya resueltos a nombre/inicial. */
   asignados: MiembroRef[]
@@ -63,6 +65,7 @@ export interface FilaAgendaDB {
   titulo: string
   fecha: string
   hora: string | null
+  hora_fin: string | null
   completado: boolean
   asignado_a: string[] | null
   created_by: string | null
@@ -86,6 +89,7 @@ export function mapearAgendaItem(
     titulo: r.titulo,
     fecha: r.fecha,
     hora: r.hora ? r.hora.slice(0, 5) : null, // "HH:MM:SS" -> "HH:MM"
+    horaFin: r.hora_fin ? r.hora_fin.slice(0, 5) : null,
     completado: r.completado,
     asignados: (r.asignado_a ?? [])
       .map((id) => miembros.get(id))
