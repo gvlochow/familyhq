@@ -69,10 +69,11 @@ export async function invitarPorEmail(
   const host = h.get("x-forwarded-host") ?? h.get("host")
   const origin = `${proto}://${host}`
 
-  // El enlace pasa por /auth/callback (ruta ya permitida) que, tras crear la
-  // sesión, redirige a la página de aceptación con el token.
-  const destinoInterno = `/onboarding/invitacion?token=${token}`
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(destinoInterno)}`
+  // El enlace aterriza directo en la página de aceptación con el token. Si el
+  // correo autentica al invitado (plantilla que apunta a /auth/confirm), llega
+  // con sesión y acepta ahí; si no, la página lo manda a iniciar sesión y luego
+  // la invitación aparece en pantalla igual (banner en el onboarding).
+  const redirectTo = `${origin}/onboarding/invitacion?token=${token}`
 
   const admin = createAdminClient()
   const { error: inviteErr } = await admin.auth.admin.inviteUserByEmail(correo, {

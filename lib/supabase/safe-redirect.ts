@@ -15,3 +15,23 @@ export function esRedirectInternoSeguro(next: string | null | undefined): next i
   if (next.includes("://")) return false
   return true
 }
+
+/**
+ * Normaliza un `next` que puede venir como ruta relativa ("/x") o como URL
+ * absoluta del propio sitio (lo que produce la plantilla de correo con
+ * `{{ .RedirectTo }}`) a una ruta interna segura (pathname+search), o null si es
+ * de otro origen o inválido. Bloquea el open-redirect a hosts externos.
+ */
+export function resolverNextSeguro(
+  next: string | null | undefined,
+  origin: string,
+): string | null {
+  if (!next) return null
+  try {
+    const u = new URL(next, origin)
+    if (u.origin !== origin) return null
+    return u.pathname + u.search
+  } catch {
+    return null
+  }
+}

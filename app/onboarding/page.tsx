@@ -10,6 +10,7 @@ import {
   ONBOARDING_UNIRSE_ROUTE,
   getPostLoginRedirect,
 } from "@/lib/supabase/post-login-redirect"
+import { PendingInvites } from "@/components/onboarding/pending-invites"
 
 // Primer paso del onboarding: elegir entre CREAR un hogar o UNIRSE a uno
 // existente. La guarda usa el routing central: sin sesión -> login; si ya avanzó
@@ -28,6 +29,14 @@ export default async function OnboardingPage() {
   if (destino !== ONBOARDING_ROUTE) {
     redirect(destino)
   }
+
+  // Invitaciones pendientes dirigidas al correo del usuario: se pueden aceptar
+  // acá mismo, sin depender del link del correo.
+  const { data: invitacionesRaw } = await supabase.rpc("mis_invitaciones")
+  const invitaciones = (invitacionesRaw ?? []).map((i) => ({
+    token: i.token,
+    householdName: i.household_name,
+  }))
 
   return (
     <main className="bg-background">
@@ -56,6 +65,8 @@ export default async function OnboardingPage() {
               no, crea el tuyo.
             </p>
           </div>
+
+          <PendingInvites invitaciones={invitaciones} />
 
           <div className="flex flex-col gap-3">
             <Link
