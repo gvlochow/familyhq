@@ -761,6 +761,7 @@ export type Database = {
       }
       create_household: { Args: { p_name: string }; Returns: string }
       current_household_id: { Args: never; Returns: string }
+      es_responsable_actual: { Args: never; Returns: boolean }
       generar_codigo_hogar: { Args: never; Returns: string }
       mis_invitaciones: {
         Args: never

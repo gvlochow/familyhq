@@ -12,6 +12,7 @@ import {
 } from "@/components/ajustes/integrantes-section"
 import { HorarioSection } from "@/components/ajustes/horario-section"
 import { CategoriasSection } from "@/components/ajustes/categorias-section"
+import { SalirHogar } from "@/components/ajustes/salir-hogar"
 import { AgendaPrefsSection } from "@/components/ajustes/agenda-prefs-section"
 import { cargarCategorias } from "../_lib/categorias"
 import { signOut } from "./actions"
@@ -34,7 +35,7 @@ export default async function AjustesPage() {
       .select("name, mostrar_categoria, join_code")
       .limit(1)
       .maybeSingle(),
-    supabase.from("members").select("id, display_name, user_id, rol, tipo_horario"),
+    supabase.from("members").select("id, display_name, user_id, rol, tipo_horario, is_owner"),
     cargarCategorias(supabase),
   ])
 
@@ -104,6 +105,7 @@ export default async function AjustesPage() {
     rol: m.rol,
     tipo: m.tipo_horario,
     esTu: m.user_id === user?.id,
+    esDueno: m.is_owner,
     administrado: m.user_id === null,
     bloquesFijo: bloquesDe(m.id),
     variableConectado: syncPorMiembro.has(m.id),
@@ -148,6 +150,8 @@ export default async function AjustesPage() {
       <CategoriasSection categorias={[...categorias.values()]} />
 
       <AgendaPrefsSection mostrarCategoria={hogar?.mostrar_categoria ?? true} />
+
+      {yo && <SalirHogar esDueno={yo.is_owner} />}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">Sesión</h2>

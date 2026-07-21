@@ -13,8 +13,8 @@ import {
   UserIcon,
 } from "lucide-react"
 
-import { agregarIntegrante, eliminarIntegrante } from "@/app/onboarding/integrantes/actions"
-import { editarIntegrante } from "@/app/(app)/ajustes/actions"
+import { agregarIntegrante } from "@/app/onboarding/integrantes/actions"
+import { editarIntegrante, quitarIntegrante } from "@/app/(app)/ajustes/actions"
 import { connectCalendar } from "@/app/onboarding/calendario/actions"
 import { ROLES, ROL_LABEL, type Rol } from "@/lib/members/rol"
 import { TIPOS_HORARIO, type TipoHorario } from "@/lib/members/tipo-horario"
@@ -37,6 +37,8 @@ export interface IntegranteVista {
   rol: string
   tipo: string
   esTu: boolean
+  /** true si es el dueño del hogar (is_owner): no se puede quitar. */
+  esDueno: boolean
   /** true si es un perfil administrado (user_id null): editable/eliminable desde acá. */
   administrado: boolean
   /** Bloques del horario fijo (si tipo='fijo'), para prellenar el editor. */
@@ -69,10 +71,13 @@ export function IntegrantesSection({
   const [error, setError] = useState<string | null>(null)
 
   async function quitar(m: IntegranteVista) {
-    if (!confirm(`¿Quitar a ${m.nombre} del hogar?`)) return
+    const aviso = m.administrado
+      ? `¿Quitar a ${m.nombre} del hogar?`
+      : `¿Quitar a ${m.nombre} del hogar? Perderá su acceso.`
+    if (!confirm(aviso)) return
     setError(null)
     setPending(true)
-    const res = await eliminarIntegrante(m.id)
+    const res = await quitarIntegrante(m.id)
     setPending(false)
     if (res.error) {
       setError(res.error)
@@ -136,29 +141,32 @@ export function IntegrantesSection({
                 </span>
               </span>
               {m.administrado && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null)
-                      setAgregando(false)
-                      setEditId(m.id)
-                    }}
-                    aria-label={`Editar a ${m.nombre}`}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <PencilIcon className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => quitar(m)}
-                    disabled={pending}
-                    aria-label={`Quitar a ${m.nombre}`}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                  >
-                    <Trash2Icon className="size-4" />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null)
+                    setAgregando(false)
+                    setEditId(m.id)
+                  }}
+                  aria-label={`Editar a ${m.nombre}`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <PencilIcon className="size-4" />
+                </button>
+              )}
+              {/* Quitar: un responsable puede quitar a cualquier otro que no sea el
+                  dueño (perfil administrado o con cuenta). Para salir uno mismo se
+                  usa "Salir del hogar" abajo. */}
+              {esResponsable && !m.esTu && !m.esDueno && (
+                <button
+                  type="button"
+                  onClick={() => quitar(m)}
+                  disabled={pending}
+                  aria-label={`Quitar a ${m.nombre}`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                >
+                  <Trash2Icon className="size-4" />
+                </button>
               )}
             </li>
           ),
