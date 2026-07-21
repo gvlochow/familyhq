@@ -85,6 +85,65 @@ export async function actualizarMostrarCategoria(valor: boolean): Promise<Result
 }
 
 /**
+ * Quita a un integrante del hogar (perfil administrado o con cuenta). La
+ * autorización la aplica la RLS members_delete: solo un responsable puede quitar
+ * a OTRO, nunca al dueño. Si no borró ninguna fila, no tenía permiso (o el objetivo
+ * es el dueño / no existe) y lo reportamos en vez de fingir éxito.
+ */
+export async function quitarIntegrante(memberId: string): Promise<Resultado> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
+
+  const { data: borrados, error } = await supabase
+    .from("members")
+    .delete()
+    .eq("id", memberId)
+    .neq("user_id", user.id) // "quitar a otro" nunca borra tu propia fila (para eso, salir)
+    .select("id")
+  if (error) return { error: "No se pudo quitar al integrante. Intenta de nuevo." }
+  if (!borrados || borrados.length === 0) {
+    return { error: "No pudiste quitar a ese integrante." }
+  }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/")
+  revalidatePath("/calendario")
+  return {}
+}
+
+/**
+ * Salir del hogar (borrar la propia membresía). La RLS members_delete solo lo
+ * permite si NO eres el dueño; si eres el dueño, no borra nada y avisamos que
+ * primero debe transferirse la propiedad (feature futura). Tras salir, la persona
+ * queda sin hogar y el routing central la lleva al onboarding.
+ */
+export async function salirDelHogar(): Promise<Resultado> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
+
+  const { data: borrados, error } = await supabase
+    .from("members")
+    .delete()
+    .eq("user_id", user.id)
+    .select("id")
+  if (error) return { error: "No se pudo salir del hogar. Intenta de nuevo." }
+  if (!borrados || borrados.length === 0) {
+    return {
+      error:
+        "Eres el dueño del hogar: por ahora no puedes salir. (Transferir la propiedad llegará pronto.)",
+    }
+  }
+
+  return {}
+}
+
+/**
  * Edita nombre/rol de un integrante. Solo perfiles ADMINISTRADOS (user_id null):
  * un integrante con cuenta propia no se edita desde acá (su nombre viene de su
  * cuenta). RLS (members_update) acota al hogar; el `.is('user_id', null)` restringe
