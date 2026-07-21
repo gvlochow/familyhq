@@ -278,10 +278,130 @@ export type Database = {
           },
         ]
       }
+      household_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          household_id: string
+          id: string
+          invited_by: string | null
+          link_member_id: string | null
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          household_id: string
+          id?: string
+          invited_by?: string | null
+          link_member_id?: string | null
+          status?: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          household_id?: string
+          id?: string
+          invited_by?: string | null
+          link_member_id?: string | null
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_invites_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_invites_link_member_id_fkey"
+            columns: ["link_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_join_requests: {
+        Row: {
+          created_at: string
+          household_id: string
+          id: string
+          link_member_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          solicitante_email: string | null
+          solicitante_nombre: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          household_id: string
+          id?: string
+          link_member_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          solicitante_email?: string | null
+          solicitante_nombre?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          household_id?: string
+          id?: string
+          link_member_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          solicitante_email?: string | null
+          solicitante_nombre?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_join_requests_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_join_requests_link_member_id_fkey"
+            columns: ["link_member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_join_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       households: {
         Row: {
           created_at: string
           id: string
+          join_code: string
           mostrar_categoria: boolean
           name: string
           onboarding_completed: boolean
@@ -292,6 +412,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          join_code?: string
           mostrar_categoria?: boolean
           name: string
           onboarding_completed?: boolean
@@ -302,6 +423,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          join_code?: string
           mostrar_categoria?: boolean
           name?: string
           onboarding_completed?: boolean
@@ -628,12 +750,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      aceptar_invitacion: { Args: { p_token: string }; Returns: Json }
       consumir_rate_limit: {
         Args: { p_accion: string; p_limite: number; p_ventana_seg: number }
         Returns: boolean
       }
+      crear_invitacion: {
+        Args: { p_email: string; p_link_member_id?: string }
+        Returns: Json
+      }
       create_household: { Args: { p_name: string }; Returns: string }
       current_household_id: { Args: never; Returns: string }
+      generar_codigo_hogar: { Args: never; Returns: string }
+      resolver_ingreso: {
+        Args: {
+          p_accion: string
+          p_link_member_id?: string
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      revocar_invitacion: { Args: { p_id: string }; Returns: undefined }
+      rotar_codigo_hogar: { Args: never; Returns: string }
+      solicitar_ingreso: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

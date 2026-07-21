@@ -8,6 +8,9 @@ import type { Database } from "@/lib/database.types"
  */
 export const APP_HOME_ROUTE = "/"
 export const ONBOARDING_ROUTE = "/onboarding"
+export const ONBOARDING_CREAR_ROUTE = "/onboarding/crear"
+export const ONBOARDING_UNIRSE_ROUTE = "/onboarding/unirse"
+export const ONBOARDING_ESPERANDO_ROUTE = "/onboarding/esperando"
 export const ONBOARDING_HORARIO_ROUTE = "/onboarding/horario"
 export const ONBOARDING_HORARIO_FIJO_ROUTE = "/onboarding/horario-fijo"
 export const ONBOARDING_CALENDARIO_ROUTE = "/onboarding/calendario"
@@ -31,7 +34,9 @@ export function rutaConfigDeTipo(tipoHorario: string | null | undefined): string
  * guardas de las rutas de app y onboarding.
  *
  * Escalones, en orden:
- *   1. Sin member (no pertenece a ningún hogar)  -> crear hogar (onboarding).
+ *   1. Sin member:
+ *        - con solicitud de ingreso pendiente -> pantalla de espera.
+ *        - sin solicitud                      -> elegir crear/unirse (onboarding).
  *   2. Con member pero tipo_horario = 'ninguno'  -> definir tipo de horario.
  *   3. Con tipo definido pero SIN configurar     -> configuración según el tipo:
  *        'variable' sin roster_connection -> conectar calendario.
@@ -67,9 +72,17 @@ export async function getPostLoginRedirect(
     return ONBOARDING_ROUTE
   }
 
-  // Sin member -> todavía no tiene hogar: primer paso del onboarding.
+  // Sin member -> todavía no tiene hogar. Si ya solicitó ingreso a un hogar y
+  // sigue pendiente, va a la pantalla de espera; si no, a elegir crear/unirse.
   if (!data) {
-    return ONBOARDING_ROUTE
+    const { data: solicitud } = await supabase
+      .from("household_join_requests")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "pendiente")
+      .maybeSingle()
+
+    return solicitud ? ONBOARDING_ESPERANDO_ROUTE : ONBOARDING_ROUTE
   }
 
   // Tiene hogar pero aún no definió su tipo de horario: siguiente paso.
