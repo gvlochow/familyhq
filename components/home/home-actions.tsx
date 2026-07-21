@@ -41,7 +41,7 @@ export function HomeActions({
               className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
             >
               <UserRoundIcon className="size-5" aria-hidden />
-              Actualizar mi estado
+              {editables.length > 1 ? "Actualizar estado" : "Actualizar mi estado"}
             </button>
             <button
               type="button"
