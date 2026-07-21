@@ -4,7 +4,7 @@ import { AuthForm } from "@/components/auth-form"
 
 const ERRORES_CALLBACK: Record<string, string> = {
   auth_callback_failed:
-    "No se pudo completar el inicio de sesión con Google. Intenta de nuevo.",
+    "No se pudo completar el inicio de sesión. Intenta de nuevo o inicia sesión con tu correo.",
 }
 
 export default async function LoginPage({
