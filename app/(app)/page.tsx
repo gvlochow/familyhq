@@ -11,7 +11,7 @@ import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda
 import { cargarTramosEfectivos } from "./_lib/tramos-efectivos"
 import { cargarAgendaRecurrente } from "./_lib/agenda-recurrente"
 import { cargarCategorias } from "./_lib/categorias"
-import { MemberStatusCard } from "@/components/home/member-status-card"
+import { MemberStatusCardLive } from "@/components/home/member-status-card-live"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
 
@@ -66,8 +66,9 @@ export default async function HomePage() {
         nombre: m.display_name,
         inicial: m.display_name.trim().charAt(0).toUpperCase() || "?",
         esTu: m.user_id === user?.id,
+        // estado inicial: solo para el orden "excepciones primero" al cargar.
         estado: ahora?.estado ?? null,
-        finUtc: ahora?.finUtc ?? null,
+        tramos: tramosDe(m),
       }
     })
     .sort(
@@ -178,13 +179,12 @@ export default async function HomePage() {
         <section className="flex flex-col gap-2.5">
           {tarjetas.length > 0 ? (
             tarjetas.map((t) => (
-              <MemberStatusCard
+              <MemberStatusCardLive
                 key={t.id}
                 inicial={t.inicial}
                 nombre={t.nombre}
                 esTu={t.esTu}
-                estado={t.estado}
-                finUtc={t.finUtc}
+                tramos={t.tramos}
                 nowISO={nowISO}
               />
             ))
