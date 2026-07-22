@@ -48,10 +48,17 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* =============================================================================
+   Temas (paletas) y modo claro/oscuro. Cada tema define sus tokens en claro y
+   oscuro; el modo se activa con la clase .dark en <html> (ver components/theme).
+   Precedencia por especificidad: :root / .dark = tema "Puerto" (default);
+   [data-theme="x"] lo pisa en claro y .dark[data-theme="x"] en oscuro.
+   Los componentes SIEMPRE consumen los tokens (--primary, --card, ...), nunca
+   colores fijos, así heredan tema y modo sin tocarlos. Ver DESIGN.md.
+   ============================================================================= */
+
+/* ---- Tema Puerto (default): azul profundo + salvia + ámbar (DESIGN.md) ---- */
 :root {
-  /* Paleta FamilyHQ (DESIGN.md). Solo se toca el tema claro: la app no tiene
-     selector de tema todavía, así que .dark queda con los valores de shadcn
-     por defecto sin usarse por ahora. */
   --background: #fafbfc;
   --foreground: #1e2933;
   --card: #ffffff;
@@ -90,24 +97,24 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #101a22;
+  --foreground: #e5ecf1;
+  --card: #17232e;
+  --card-foreground: #e5ecf1;
+  --popover: #17232e;
+  --popover-foreground: #e5ecf1;
+  --primary: #3c688a;
+  --primary-foreground: #ffffff;
+  --secondary: #33474a;
+  --secondary-foreground: #dfeae6;
+  --muted: #1d2b36;
+  --muted-foreground: #93a6b3;
+  --accent: #f2b94b;
+  --accent-foreground: #241c0a;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: #ffffff1a;
+  --input: #ffffff24;
+  --ring: #6ea3c4;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -121,6 +128,92 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ---- Tema Bosque: verde pino + hoja + ocre ---- */
+[data-theme="bosque"] {
+  --background: #f7faf6;
+  --foreground: #1f2a23;
+  --card: #ffffff;
+  --card-foreground: #1f2a23;
+  --popover: #ffffff;
+  --popover-foreground: #1f2a23;
+  --primary: #336654;
+  --primary-foreground: #ffffff;
+  --secondary: #c3d8b9;
+  --secondary-foreground: #1f2a23;
+  --muted: #e9f0e8;
+  --muted-foreground: #566b5d;
+  --accent: #e0a53c;
+  --accent-foreground: #241d0c;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #dce6da;
+  --input: #dce6da;
+  --ring: #336654;
+}
+
+.dark[data-theme="bosque"] {
+  --background: #0f1712;
+  --foreground: #e6ede7;
+  --card: #16211a;
+  --card-foreground: #e6ede7;
+  --popover: #16211a;
+  --popover-foreground: #e6ede7;
+  --primary: #3d7961;
+  --primary-foreground: #ffffff;
+  --secondary: #2d3f36;
+  --secondary-foreground: #e6ede7;
+  --muted: #18241d;
+  --muted-foreground: #92a89a;
+  --accent: #e6b24f;
+  --accent-foreground: #241d0c;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #ffffff17;
+  --input: #ffffff22;
+  --ring: #6bbf97;
+}
+
+/* ---- Tema Ciruela: ciruela + lila + coral ---- */
+[data-theme="ciruela"] {
+  --background: #fbf8fb;
+  --foreground: #2a2130;
+  --card: #ffffff;
+  --card-foreground: #2a2130;
+  --popover: #ffffff;
+  --popover-foreground: #2a2130;
+  --primary: #6a4a6e;
+  --primary-foreground: #ffffff;
+  --secondary: #ddc9e0;
+  --secondary-foreground: #2a2130;
+  --muted: #f1ebf1;
+  --muted-foreground: #6b5f6e;
+  --accent: #e0895c;
+  --accent-foreground: #2a1810;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #e7dee9;
+  --input: #e7dee9;
+  --ring: #6a4a6e;
+}
+
+.dark[data-theme="ciruela"] {
+  --background: #150f18;
+  --foreground: #ece5ee;
+  --card: #1e1623;
+  --card-foreground: #ece5ee;
+  --popover: #1e1623;
+  --popover-foreground: #ece5ee;
+  --primary: #8a5f90;
+  --primary-foreground: #ffffff;
+  --secondary: #3a2f40;
+  --secondary-foreground: #ece5ee;
+  --muted: #221a28;
+  --muted-foreground: #a596ab;
+  --accent: #e6976b;
+  --accent-foreground: #241610;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #ffffff17;
+  --input: #ffffff22;
+  --ring: #b184b8;
 }
 
 @layer base {

@@ -15,6 +15,7 @@ import { CategoriasSection } from "@/components/ajustes/categorias-section"
 import { SalirHogar } from "@/components/ajustes/salir-hogar"
 import { CompartirApp } from "@/components/ajustes/compartir-app"
 import { AgendaPrefsSection } from "@/components/ajustes/agenda-prefs-section"
+import { AparienciaSection } from "@/components/ajustes/apariencia-section"
 import { cargarCategorias } from "../_lib/categorias"
 import { signOut } from "./actions"
 
@@ -151,6 +152,8 @@ export default async function AjustesPage() {
       <CategoriasSection categorias={[...categorias.values()]} />
 
       <AgendaPrefsSection mostrarCategoria={hogar?.mostrar_categoria ?? true} />
+
+      <AparienciaSection />
 
       <CompartirApp />
 

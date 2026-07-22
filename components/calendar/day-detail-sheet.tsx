@@ -61,7 +61,7 @@ export function DayDetailSheet({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] dark:bg-black/60"
       />
 
       <div className="relative flex max-h-[75svh] w-full max-w-sm flex-col gap-4 overflow-y-auto rounded-t-2xl bg-card px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl">

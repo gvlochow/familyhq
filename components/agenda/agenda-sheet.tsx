@@ -180,7 +180,7 @@ export function AgendaSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={esEdicion ? "Editar tarea o evento" : "Nueva tarea o evento"}>
-      <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px]" />
+      <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] dark:bg-black/60" />
 
       <form
         onSubmit={guardar}
