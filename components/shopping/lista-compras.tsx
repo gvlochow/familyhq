@@ -18,10 +18,12 @@ import {
   vaciarComprados,
 } from "@/app/(app)/compras/actions"
 import { Input } from "@/components/ui/input"
+import { useConfirmar } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 export function ListaCompras({ items }: { items: ItemCompra[] }) {
   const router = useRouter()
+  const confirmar = useConfirmar()
   const [pendiente, startTransition] = useTransition()
   const [nombre, setNombre] = useState("")
   const [cantidad, setCantidad] = useState("")
@@ -60,8 +62,14 @@ export function ListaCompras({ items }: { items: ItemCompra[] }) {
     })
   }
 
-  function vaciar() {
-    if (!confirm("¿Quitar todos los ítems ya comprados de la lista?")) return
+  async function vaciar() {
+    const ok = await confirmar({
+      titulo: "¿Vaciar los comprados?",
+      descripcion: "Se quitan de la lista todos los ítems ya marcados como comprados.",
+      confirmar: "Vaciar",
+      destructivo: true,
+    })
+    if (!ok) return
     startTransition(async () => {
       await vaciarComprados()
       router.refresh()

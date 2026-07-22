@@ -6,6 +6,7 @@ import {
   getPostLoginRedirect,
 } from "@/lib/supabase/post-login-redirect"
 import { TabBar } from "@/components/nav/tab-bar"
+import { ConfirmProvider } from "@/components/ui/confirm-dialog"
 
 /**
  * Guarda de acceso para toda la app autenticada (grupo de rutas (app), sin
@@ -36,9 +37,9 @@ export default async function AppLayout({
   }
 
   return (
-    <>
+    <ConfirmProvider>
       {children}
       <TabBar />
-    </>
+    </ConfirmProvider>
   )
 }

@@ -9,6 +9,7 @@ import { crearCategoria } from "@/app/(app)/tareas/actions"
 import { editarCategoria, eliminarCategoria } from "@/app/(app)/ajustes/actions"
 import { PaletaSwatches } from "@/components/agenda/paleta-swatches"
 import { Button } from "@/components/ui/button"
+import { useConfirmar } from "@/components/ui/confirm-dialog"
 
 /**
  * Sección Categorías de Ajustes: lista las categorías del hogar y permite crear,
@@ -17,13 +18,20 @@ import { Button } from "@/components/ui/button"
  */
 export function CategoriasSection({ categorias }: { categorias: CategoriaRef[] }) {
   const router = useRouter()
+  const confirmar = useConfirmar()
   const [agregando, setAgregando] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function borrar(c: CategoriaRef) {
-    if (!confirm(`¿Eliminar la categoría "${c.nombre}"? Los ítems quedarán sin categoría.`)) return
+    const ok = await confirmar({
+      titulo: `¿Eliminar la categoría "${c.nombre}"?`,
+      descripcion: "Los ítems quedarán sin categoría.",
+      confirmar: "Eliminar",
+      destructivo: true,
+    })
+    if (!ok) return
     setError(null)
     setPending(true)
     const res = await eliminarCategoria(c.id)

@@ -23,6 +23,7 @@ import { TZ_LOCAL } from "@/lib/roster/types"
 import { FixedScheduleForm } from "@/components/onboarding/fixed-schedule-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useConfirmar } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 const TIPO_LABEL: Record<TipoHorario, string> = {
@@ -65,16 +66,20 @@ export function IntegrantesSection({
   esResponsable: boolean
 }) {
   const router = useRouter()
+  const confirmar = useConfirmar()
   const [agregando, setAgregando] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function quitar(m: IntegranteVista) {
-    const aviso = m.administrado
-      ? `¿Quitar a ${m.nombre} del hogar?`
-      : `¿Quitar a ${m.nombre} del hogar? Perderá su acceso.`
-    if (!confirm(aviso)) return
+    const ok = await confirmar({
+      titulo: `¿Quitar a ${m.nombre} del hogar?`,
+      descripcion: m.administrado ? undefined : "Perderá su acceso al hogar.",
+      confirmar: "Quitar",
+      destructivo: true,
+    })
+    if (!ok) return
     setError(null)
     setPending(true)
     const res = await quitarIntegrante(m.id)
