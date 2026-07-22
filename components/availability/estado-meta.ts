@@ -30,7 +30,7 @@ export const ESTADO_META: Record<EstadoDisponibilidad, EstadoMeta> = {
     label: "En casa",
     Icono: HouseIcon,
     cardClass: "bg-secondary text-secondary-foreground",
-    iconWrapClass: "bg-white/40 text-secondary-foreground",
+    iconWrapClass: "bg-white/40 text-secondary-foreground dark:bg-white/10",
     chipClass: "bg-secondary text-secondary-foreground",
   },
   fuera: {
@@ -44,7 +44,7 @@ export const ESTADO_META: Record<EstadoDisponibilidad, EstadoMeta> = {
     label: "Standby en casa",
     Icono: PhoneCallIcon,
     cardClass: "bg-secondary/50 text-secondary-foreground ring-1 ring-primary/20",
-    iconWrapClass: "bg-white/50 text-primary",
+    iconWrapClass: "bg-white/50 text-primary dark:bg-white/10 dark:text-secondary-foreground",
     chipClass: "bg-secondary/60 text-secondary-foreground ring-1 ring-primary/20",
   },
   por_confirmar: {

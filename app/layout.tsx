@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { RegisterSW } from "@/components/pwa/register-sw";
+import { ThemeScript } from "@/components/theme/theme-script";
+import { ThemeSync } from "@/components/theme/theme-sync";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-heading" });
@@ -43,10 +45,13 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable, manrope.variable)}
     >
       <body className="min-h-full flex flex-col">
+        <ThemeScript />
         {children}
+        <ThemeSync />
         <RegisterSW />
       </body>
     </html>

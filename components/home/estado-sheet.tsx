@@ -139,7 +139,7 @@ export function EstadoSheet({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] dark:bg-black/60"
       />
 
       <form

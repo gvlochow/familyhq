@@ -116,7 +116,7 @@ function AjustesDrawer({
         type="button"
         aria-label="Cerrar"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] animate-in fade-in"
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] animate-in fade-in dark:bg-black/60"
       />
 
       <div className="relative flex h-full w-full max-w-[17rem] flex-col bg-card shadow-xl animate-in slide-in-from-right duration-200 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
