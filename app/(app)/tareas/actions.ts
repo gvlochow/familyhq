@@ -351,6 +351,7 @@ export async function marcarCompletado(id: string, completado: boolean): Promise
 
   revalidatePath("/tareas")
   revalidatePath("/")
+  revalidatePath("/historial")
   return {}
 }
 
@@ -402,6 +403,7 @@ export async function marcarOcurrenciaRecurrente(
 
   revalidatePath("/tareas")
   revalidatePath("/")
+  revalidatePath("/historial")
   return {}
 }
 
