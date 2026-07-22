@@ -15,9 +15,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-const TIPOS: { valor: "variable" | "fijo"; label: string }[] = [
+const TIPOS: { valor: "variable" | "fijo" | "sin_horario"; label: string }[] = [
   { valor: "variable", label: "Variable / turnos" },
   { valor: "fijo", label: "Horario fijo" },
+  { valor: "sin_horario", label: "Sin horario" },
 ]
 
 /**
@@ -46,7 +47,7 @@ export function HorarioSection({
   const [error, setError] = useState<string | null>(null)
   const [editando, setEditando] = useState(false)
 
-  async function cambiarTipo(nuevo: "variable" | "fijo") {
+  async function cambiarTipo(nuevo: "variable" | "fijo" | "sin_horario") {
     if (nuevo === tipo) return
     setError(null)
     setPending(true)
@@ -91,6 +92,12 @@ export function HorarioSection({
       {tipo === "ninguno" && (
         <p className="text-sm text-muted-foreground">
           Elige un tipo de horario para configurar tu disponibilidad.
+        </p>
+      )}
+
+      {tipo === "sin_horario" && (
+        <p className="text-sm text-muted-foreground">
+          Sin horario: apareces en casa por defecto. Puedes cambiar tu estado cuando quieras.
         </p>
       )}
 

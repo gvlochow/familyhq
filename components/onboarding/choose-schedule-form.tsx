@@ -3,11 +3,14 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { CheckIcon, ClockIcon, Loader2Icon, PlaneIcon } from "lucide-react"
+import { CheckIcon, ClockIcon, HouseIcon, Loader2Icon, PlaneIcon } from "lucide-react"
 
 import { setTipoHorario } from "@/app/onboarding/horario/actions"
 import type { TipoHorarioSeleccionable } from "@/lib/members/tipo-horario"
-import { rutaConfigDeTipo } from "@/lib/supabase/post-login-redirect"
+import {
+  ONBOARDING_INTEGRANTES_ROUTE,
+  rutaConfigDeTipo,
+} from "@/lib/supabase/post-login-redirect"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -36,6 +39,12 @@ const OPCIONES: readonly Opcion[] = [
     titulo: "Fijo",
     descripcion: "Trabajo el mismo horario la mayoría de los días.",
     Icono: ClockIcon,
+  },
+  {
+    valor: "sin_horario",
+    titulo: "Sin horario",
+    descripcion: "No trabajo con un horario — quedo en casa por defecto.",
+    Icono: HouseIcon,
   },
 ]
 
@@ -66,10 +75,11 @@ export function ChooseScheduleForm() {
       return
     }
 
-    // Avance explícito al paso de configuración según el tipo (la guarda permite
-    // volver atrás, así que ya no dependemos del rebote de router.refresh).
+    // Avance explícito al paso siguiente (la guarda permite volver atrás, así que
+    // ya no dependemos del rebote de router.refresh). 'variable'/'fijo' van a su
+    // config; 'sin_horario' no tiene config → salta al paso de integrantes.
     // Dejamos pending en true: la navegación desmonta esta pantalla.
-    router.push(rutaConfigDeTipo(seleccion)!)
+    router.push(rutaConfigDeTipo(seleccion) ?? ONBOARDING_INTEGRANTES_ROUTE)
   }
 
   const porcentaje = Math.round((PASO_ACTUAL / TOTAL_PASOS) * 100)

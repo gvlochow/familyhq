@@ -17,7 +17,10 @@ import { agregarIntegrante } from "@/app/onboarding/integrantes/actions"
 import { editarIntegrante, quitarIntegrante } from "@/app/(app)/ajustes/actions"
 import { connectCalendar } from "@/app/onboarding/calendario/actions"
 import { ROLES, ROL_LABEL, type Rol } from "@/lib/members/rol"
-import { TIPOS_HORARIO, type TipoHorario } from "@/lib/members/tipo-horario"
+import {
+  TIPOS_HORARIO_SELECCIONABLES,
+  type TipoHorario,
+} from "@/lib/members/tipo-horario"
 import type { BloqueDia } from "@/lib/members/horario-fijo"
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { FixedScheduleForm } from "@/components/onboarding/fixed-schedule-form"
@@ -27,7 +30,8 @@ import { useConfirmar } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 const TIPO_LABEL: Record<TipoHorario, string> = {
-  ninguno: "Sin horario",
+  ninguno: "Sin horario", // legado: perfiles antiguos "sin definir"
+  sin_horario: "Sin horario",
   fijo: "Horario fijo",
   variable: "Variable / turnos",
 }
@@ -198,7 +202,7 @@ export function IntegrantesSection({
 function AgregarIntegrante({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
   const [nombre, setNombre] = useState("")
   const [rol, setRol] = useState<Rol>("integrante")
-  const [tipo, setTipo] = useState<TipoHorario>("ninguno")
+  const [tipo, setTipo] = useState<TipoHorario>("sin_horario")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -228,7 +232,7 @@ function AgregarIntegrante({ onCancel, onDone }: { onCancel: () => void; onDone:
         disabled={pending}
       />
       <Pills titulo="Rol" opciones={ROLES} label={(r) => ROL_LABEL[r as Rol]} valor={rol} onChange={(v) => setRol(v as Rol)} />
-      <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
+      <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO_SELECCIONABLES} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={pending || !nombre.trim()} className="flex-1">
           {pending ? <Loader2Icon className="size-4 animate-spin" /> : "Agregar"}
@@ -260,7 +264,13 @@ function EditarIntegrante({
 }) {
   const [nombre, setNombre] = useState(integrante.nombre)
   const [rol, setRol] = useState<Rol>((integrante.rol as Rol) ?? "integrante")
-  const [tipo, setTipo] = useState<TipoHorario>((integrante.tipo as TipoHorario) ?? "ninguno")
+  // 'ninguno' (legado "sin definir") se muestra como "Sin horario": misma conducta
+  // (en casa) y así la píldora queda seleccionada.
+  const [tipo, setTipo] = useState<TipoHorario>(
+    integrante.tipo === "ninguno" || !integrante.tipo
+      ? "sin_horario"
+      : (integrante.tipo as TipoHorario),
+  )
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -285,7 +295,7 @@ function EditarIntegrante({
       >
         <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoFocus disabled={pending} />
         <Pills titulo="Rol" opciones={ROLES} label={(r) => ROL_LABEL[r as Rol]} valor={rol} onChange={(v) => setRol(v as Rol)} />
-        <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
+        <Pills titulo="Tipo de horario" opciones={TIPOS_HORARIO_SELECCIONABLES} label={(t) => TIPO_LABEL[t as TipoHorario]} valor={tipo} onChange={(v) => setTipo(v as TipoHorario)} />
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={pending || !nombre.trim()} className="flex-1">
             {pending ? <Loader2Icon className="size-4 animate-spin" /> : "Guardar"}
