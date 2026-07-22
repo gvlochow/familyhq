@@ -97,11 +97,15 @@ export async function quitarIntegrante(memberId: string): Promise<Resultado> {
   } = await supabase.auth.getUser()
   if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." }
 
+  // "Quitar a otro" nunca borra tu propia fila (para eso, salir). OJO: no usar
+  // .neq("user_id", user.id): en SQL, NULL <> uuid da NULL (no TRUE), así que ese
+  // filtro EXCLUÍA a los perfiles administrados (user_id null) y no se podían
+  // quitar. El `or` incluye explícitamente las filas sin cuenta.
   const { data: borrados, error } = await supabase
     .from("members")
     .delete()
     .eq("id", memberId)
-    .neq("user_id", user.id) // "quitar a otro" nunca borra tu propia fila (para eso, salir)
+    .or(`user_id.is.null,user_id.neq.${user.id}`)
     .select("id")
   if (error) return { error: "No se pudo quitar al integrante. Intenta de nuevo." }
   if (!borrados || borrados.length === 0) {
