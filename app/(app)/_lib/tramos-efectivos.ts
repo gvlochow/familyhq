@@ -48,6 +48,7 @@ export async function cargarTramosEfectivos(
     { data: overrides },
     { data: eventosPuntuales },
     { data: reglasEvento },
+    { data: excs },
   ] = await Promise.all([
     supabase
       .from("availability_segments")
@@ -74,12 +75,20 @@ export async function cargarTramosEfectivos(
     // Reglas recurrentes opt-in (se expanden a ocurrencias abajo).
     supabase
       .from("recurring_activities")
-      .select("hora, hora_fin, asignado_a, recurrence, fecha_inicio, fecha_fin")
+      .select("id, hora, hora_fin, asignado_a, recurrence, fecha_inicio, fecha_fin")
       .eq("afecta_disponibilidad", true)
       .eq("tipo", "evento")
       .not("hora", "is", null)
       .not("hora_fin", "is", null),
+    // Ocurrencias omitidas ("esta vez no"): se descartan de la capa de eventos.
+    supabase
+      .from("recurring_exceptions")
+      .select("recurring_activity_id, fecha")
+      .gte("fecha", localDesde)
+      .lte("fecha", localHasta),
   ])
+
+  const omitidas = new Set((excs ?? []).map((e) => `${e.recurring_activity_id}:${e.fecha}`))
 
   const eventos: EventoDisponibilidad[] = []
   for (const e of eventosPuntuales ?? []) {
@@ -96,6 +105,7 @@ export async function cargarTramosEfectivos(
     const asignados = r.asignado_a ?? []
     if (asignados.length === 0) continue
     for (const fecha of ocurrencias(r.recurrence, localDesde, localHasta, r.fecha_inicio, r.fecha_fin)) {
+      if (omitidas.has(`${r.id}:${fecha}`)) continue // "esta vez no"
       eventos.push({
         fecha,
         hora: r.hora.slice(0, 5),

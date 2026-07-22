@@ -21,11 +21,12 @@ import {
   eliminarAgendaItem,
   marcarOcurrenciaRecurrente,
   eliminarActividadRecurrente,
+  omitirOcurrenciaRecurrente,
 } from "@/app/(app)/tareas/actions"
 import { AsignadosChips } from "./asignados-chips"
 import { CategoriaChip } from "./categoria-chip"
 import { AgendaSheet } from "./agenda-sheet"
-import { useConfirmar } from "@/components/ui/confirm-dialog"
+import { EliminarRecurrenteDialog } from "./eliminar-recurrente-dialog"
 import { cn } from "@/lib/utils"
 
 /** Instante ISO de un item (fecha + hora, o inicio del día) para formatear el "cuándo". */
@@ -52,9 +53,9 @@ export function AgendaTab({
   mostrarCategoria: boolean
 }) {
   const router = useRouter()
-  const confirmar = useConfirmar()
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState<AgendaItem | null>(null)
+  const [borrarRec, setBorrarRec] = useState<AgendaItem | null>(null)
   const [pendiente, startTransition] = useTransition()
 
   const pendientes = items.filter((i) => !(i.tipo === "tarea" && i.completado))
@@ -70,24 +71,32 @@ export function AgendaTab({
       router.refresh()
     })
   }
-  async function borrar(item: AgendaItem) {
-    // Una ocurrencia recurrente no se borra sola: se elimina la regla completa.
+  function borrar(item: AgendaItem) {
+    // Una ocurrencia recurrente ofrece elegir: omitir solo esta o borrar la regla.
     if (item.recurrente && item.recurrenteId) {
-      const ok = await confirmar({
-        titulo: `¿Eliminar la actividad recurrente "${item.titulo}"?`,
-        descripcion: "Dejará de repetirse.",
-        confirmar: "Eliminar",
-        destructivo: true,
-      })
-      if (!ok) return
-      startTransition(async () => {
-        await eliminarActividadRecurrente(item.recurrenteId!)
-        router.refresh()
-      })
+      setBorrarRec(item)
       return
     }
     startTransition(async () => {
       await eliminarAgendaItem(item.id)
+      router.refresh()
+    })
+  }
+
+  function omitirOcurrencia(item: AgendaItem) {
+    setBorrarRec(null)
+    if (!item.recurrenteId) return
+    startTransition(async () => {
+      await omitirOcurrenciaRecurrente(item.recurrenteId!, item.fecha)
+      router.refresh()
+    })
+  }
+
+  function eliminarRegla(item: AgendaItem) {
+    setBorrarRec(null)
+    if (!item.recurrenteId) return
+    startTransition(async () => {
+      await eliminarActividadRecurrente(item.recurrenteId!)
       router.refresh()
     })
   }
@@ -144,6 +153,15 @@ export function AgendaTab({
           categorias={categorias}
           agregadoPor={agregadoPor}
           onClose={() => setAbierto(false)}
+        />
+      )}
+
+      {borrarRec && (
+        <EliminarRecurrenteDialog
+          item={borrarRec}
+          onOmitir={() => omitirOcurrencia(borrarRec)}
+          onEliminarTodo={() => eliminarRegla(borrarRec)}
+          onClose={() => setBorrarRec(null)}
         />
       )}
     </>

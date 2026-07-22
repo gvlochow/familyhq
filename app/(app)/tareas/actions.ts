@@ -405,6 +405,33 @@ export async function marcarOcurrenciaRecurrente(
   return {}
 }
 
+/**
+ * Omite UNA ocurrencia de una actividad recurrente ("esta vez no"): inserta una
+ * fila en recurring_exceptions (regla, fecha). La expansión al leer la descarta en
+ * todos los consumidores. Idempotente: si ya estaba omitida, no falla (upsert).
+ * RLS exige que la regla sea del hogar.
+ */
+export async function omitirOcurrenciaRecurrente(
+  ruleId: string,
+  fecha: string,
+): Promise<Resultado> {
+  const supabase = await createClient()
+  const miembro = await miembroActual(supabase)
+  if (!miembro) return { error: "No hay sesión." }
+  if (!RE_ISO_DATE.test(fecha)) return { error: "Fecha inválida." }
+
+  const { error } = await supabase.from("recurring_exceptions").upsert(
+    { recurring_activity_id: ruleId, fecha, created_by: miembro.id },
+    { onConflict: "recurring_activity_id,fecha" },
+  )
+  if (error) return { error: "No se pudo omitir la ocurrencia." }
+
+  revalidatePath("/tareas")
+  revalidatePath("/")
+  revalidatePath("/calendario")
+  return {}
+}
+
 /** Elimina una actividad recurrente completa (sus completaciones caen por cascade). */
 export async function eliminarActividadRecurrente(ruleId: string): Promise<Resultado> {
   const supabase = await createClient()
