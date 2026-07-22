@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { DateTime } from "luxon"
 import { RepeatIcon, TrophyIcon } from "lucide-react"
 
@@ -11,26 +12,43 @@ import {
 import { AjustesLauncher } from "@/components/nav/ajustes-launcher"
 import { cn } from "@/lib/utils"
 
-/** Ventana del feed de actividad reciente (el puntaje usa solo el mes en curso). */
-const DIAS_FEED = 60
 /** Cuántas filas de actividad reciente mostrar. */
 const MAX_FEED = 40
 
+/** Periodo del puntaje/actividad, elegible por query param (?p=). */
+const PERIODOS = ["semana", "mes", "todo"] as const
+type Periodo = (typeof PERIODOS)[number]
+const PERIODO_LABEL: Record<Periodo, string> = { semana: "Semana", mes: "Mes", todo: "Todo" }
+
+function esPeriodo(v: unknown): v is Periodo {
+  return typeof v === "string" && (PERIODOS as readonly string[]).includes(v)
+}
+
 /**
- * Historial de tareas: puntaje por integrante (mes en curso) + actividad reciente
- * (quién completó qué y cuándo). Server Component: une los dos orígenes de
- * "completado" —tareas puntuales (agenda_items) y ocurrencias recurrentes
- * (recurring_completions)— que ya guardan completado_por/at. RLS acota al hogar.
- *
- * Se llega desde el cajón lateral (no ocupa una tab del bottom nav).
+ * Historial de tareas: puntaje por integrante + actividad reciente (quién completó
+ * qué y cuándo), filtrable por periodo (semana / mes / todo). Server Component: une
+ * los dos orígenes de "completado" —tareas puntuales (agenda_items) y ocurrencias
+ * recurrentes (recurring_completions)— que ya guardan completado_por/at. RLS acota
+ * al hogar. Se llega desde el cajón lateral (no ocupa una tab del bottom nav).
  */
-export default async function HistorialPage() {
+export default async function HistorialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ p?: string }>
+}) {
   const supabase = await createClient()
 
+  const { p } = await searchParams
+  const periodo: Periodo = esPeriodo(p) ? p : "mes"
+
   const hoy = DateTime.now().setZone(TZ_LOCAL)
-  const inicioMes = hoy.startOf("month")
-  const desdeFeed = hoy.minus({ days: DIAS_FEED }).startOf("day")
-  const desdeFeedISO = desdeFeed.toUTC().toISO()!
+  const desde =
+    periodo === "semana"
+      ? hoy.startOf("week")
+      : periodo === "mes"
+        ? hoy.startOf("month")
+        : DateTime.fromMillis(0, { zone: TZ_LOCAL }) // "todo": sin corte inferior
+  const desdeISO = desde.toUTC().toISO()!
 
   const [{ data: members }, { data: puntualesRaw }, { data: recurrentesRaw }] =
     await Promise.all([
@@ -41,21 +59,21 @@ export default async function HistorialPage() {
         .eq("completado", true)
         .eq("tipo", "tarea")
         .not("completado_at", "is", null)
-        .gte("completado_at", desdeFeedISO),
+        .gte("completado_at", desdeISO),
       supabase
         .from("recurring_completions")
         .select("completado_at, completado_por, recurring_activities(titulo)")
         .not("completado_at", "is", null)
-        .gte("completado_at", desdeFeedISO),
+        .gte("completado_at", desdeISO),
     ])
 
   const eventos: EventoHistorial[] = []
-  for (const p of puntualesRaw ?? []) {
-    if (!p.completado_at) continue
+  for (const pt of puntualesRaw ?? []) {
+    if (!pt.completado_at) continue
     eventos.push({
-      titulo: p.titulo,
-      memberId: p.completado_por,
-      completadoAt: p.completado_at,
+      titulo: pt.titulo,
+      memberId: pt.completado_por,
+      completadoAt: pt.completado_at,
       recurrente: false,
     })
   }
@@ -82,8 +100,8 @@ export default async function HistorialPage() {
     ]),
   )
 
-  // Puntaje del mes: todos los integrantes (0 incluido), ordenados por conteo.
-  const conteo = contarPorMiembro(eventos, inicioMes.toUTC().toISO()!)
+  // Puntaje del periodo: todos los integrantes (0 incluido), ordenados por conteo.
+  const conteo = contarPorMiembro(eventos, desdeISO)
   const board = (members ?? [])
     .map((m) => ({
       id: m.id,
@@ -95,7 +113,19 @@ export default async function HistorialPage() {
   const lider = board[0]?.conteo > 0 ? board[0].id : null
 
   const feed = ordenarRecienteDesc(eventos).slice(0, MAX_FEED)
-  const mesTxt = capitalizar(inicioMes.setLocale("es").toFormat("LLLL"))
+
+  const tituloPuntaje =
+    periodo === "semana"
+      ? "Puntaje de esta semana"
+      : periodo === "mes"
+        ? `Puntaje de ${capitalizar(hoy.setLocale("es").toFormat("LLLL"))}`
+        : "Puntaje de siempre"
+  const vacioTxt =
+    periodo === "semana"
+      ? "Nadie completó tareas esta semana."
+      : periodo === "mes"
+        ? "Nadie completó tareas este mes."
+        : "Cuando alguien complete una tarea, aparece acá con su puntaje."
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-6 px-6 pt-8 pb-28">
@@ -107,17 +137,42 @@ export default async function HistorialPage() {
         <AjustesLauncher />
       </div>
 
+      {/* Selector de periodo (siempre visible, aunque el periodo esté vacío). */}
+      <div
+        role="tablist"
+        aria-label="Periodo"
+        className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1"
+      >
+        {PERIODOS.map((per) => {
+          const activo = per === periodo
+          return (
+            <Link
+              key={per}
+              href={per === "mes" ? "/historial" : `/historial?p=${per}`}
+              role="tab"
+              aria-selected={activo}
+              className={cn(
+                "rounded-lg py-2 text-center text-sm font-medium transition-colors",
+                activo
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {PERIODO_LABEL[per]}
+            </Link>
+          )
+        })}
+      </div>
+
       {eventos.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Cuando alguien complete una tarea, aparece acá con su puntaje.
-        </p>
+        <p className="text-sm text-muted-foreground">{vacioTxt}</p>
       ) : (
         <>
-          {/* Puntaje del mes. */}
+          {/* Puntaje del periodo. */}
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               <TrophyIcon className="size-3.5" aria-hidden />
-              Puntaje de {mesTxt}
+              {tituloPuntaje}
             </h2>
             <ul className="flex flex-col gap-1.5">
               {board.map((m) => {
@@ -136,7 +191,7 @@ export default async function HistorialPage() {
                     <span className="flex-1 truncate text-sm font-medium text-foreground">
                       {m.nombre}
                     </span>
-                    {esLider && <TrophyIcon className="size-4 text-accent" aria-label="Líder del mes" />}
+                    {esLider && <TrophyIcon className="size-4 text-accent" aria-label="Líder" />}
                     <span className="text-sm font-semibold tabular-nums text-foreground">
                       {m.conteo}
                     </span>
@@ -152,7 +207,7 @@ export default async function HistorialPage() {
           {/* Actividad reciente. */}
           <section className="flex flex-col gap-1">
             <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Actividad reciente
+              Actividad
             </h2>
             <ul className="flex flex-col">
               {feed.map((e, i) => {
