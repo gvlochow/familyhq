@@ -66,6 +66,10 @@ export async function setTipoHorario(
     await supabase.from("roster_connections").delete().eq("member_id", yo.id)
   } else if (tipo === "variable") {
     await supabase.from("fixed_schedules").delete().eq("member_id", yo.id)
+  } else if (tipo === "sin_horario") {
+    // Sin horario no usa ninguna config: limpiar ambas (incluida la iCal cifrada).
+    await supabase.from("roster_connections").delete().eq("member_id", yo.id)
+    await supabase.from("fixed_schedules").delete().eq("member_id", yo.id)
   }
 
   return { error: null }

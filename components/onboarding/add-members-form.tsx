@@ -29,14 +29,16 @@ const ROL_OPCIONES: { valor: Rol; label: string }[] = [
 ]
 
 const TIPO_OPCIONES: { valor: TipoHorario; label: string }[] = [
-  { valor: "ninguno", label: "Sin horario" },
+  { valor: "sin_horario", label: "Sin horario" },
   { valor: "fijo", label: "Fijo" },
   { valor: "variable", label: "Variable" },
 ]
 
 // Tipado por el enum: exhaustivo y con typos detectables en compilación.
+// 'ninguno' se mantiene solo para mostrar (perfiles antiguos "sin definir").
 const TIPO_LABEL: Record<TipoHorario, string> = {
   ninguno: "Sin horario",
+  sin_horario: "Sin horario",
   fijo: "Horario fijo",
   variable: "Variable / turnos",
 }
@@ -59,7 +61,7 @@ export function AddMembersForm({
 
   const [nombre, setNombre] = useState("")
   const [rol, setRol] = useState<Rol>("integrante")
-  const [tipoHorario, setTipoHorario] = useState<TipoHorario>("ninguno")
+  const [tipoHorario, setTipoHorario] = useState<TipoHorario>("sin_horario")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,7 +82,7 @@ export function AddMembersForm({
     // Reset del formulario; la lista se actualiza al refrescar (dato de servidor).
     setNombre("")
     setRol("integrante")
-    setTipoHorario("ninguno")
+    setTipoHorario("sin_horario")
     setPending(false)
     router.refresh()
   }
