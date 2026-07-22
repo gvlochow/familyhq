@@ -92,6 +92,13 @@ describe('expandirRecurrentes', () => {
     expect(expandirRecurrentes(malas, new Set(), '2026-07-01', '2026-12-31', miembros, cats)).toEqual([])
   })
 
+  it('omite las ocurrencias en el set de omitidas ("esta vez no")', () => {
+    const omitidas = new Set(['r1:2026-08-05'])
+    const items = expandirRecurrentes([regla()], new Set(), '2026-07-01', '2026-09-30', miembros, cats, omitidas)
+    // 07-05 y 09-05 quedan; 08-05 se descarta por completo.
+    expect(items.map((i) => i.fecha)).toEqual(['2026-07-05', '2026-09-05'])
+  })
+
   it('ordena por fecha al mezclar varias reglas', () => {
     const semanal = regla({ id: 'r2', recurrence: { tipo: 'dias_semana', dias: [2] }, asignado_a: [] })
     const items = expandirRecurrentes([regla(), semanal], new Set(), '2026-07-01', '2026-07-08', miembros, cats)

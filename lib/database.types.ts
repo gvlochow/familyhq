@@ -635,6 +635,45 @@ export type Database = {
           },
         ]
       }
+      recurring_exceptions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          fecha: string
+          id: string
+          recurring_activity_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          fecha: string
+          id?: string
+          recurring_activity_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          id?: string
+          recurring_activity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_exceptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_exceptions_recurring_activity_id_fkey"
+            columns: ["recurring_activity_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roster_connections: {
         Row: {
           created_at: string

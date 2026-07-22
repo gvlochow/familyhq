@@ -27,13 +27,21 @@ export async function cargarAgendaRecurrente(
 
   if (!reglas?.length) return []
 
-  const { data: comps } = await supabase
-    .from("recurring_completions")
-    .select("recurring_activity_id, fecha")
-    .gte("fecha", desdeISO)
-    .lte("fecha", hastaISO)
+  const [{ data: comps }, { data: excs }] = await Promise.all([
+    supabase
+      .from("recurring_completions")
+      .select("recurring_activity_id, fecha")
+      .gte("fecha", desdeISO)
+      .lte("fecha", hastaISO),
+    supabase
+      .from("recurring_exceptions")
+      .select("recurring_activity_id, fecha")
+      .gte("fecha", desdeISO)
+      .lte("fecha", hastaISO),
+  ])
 
   const completadas = new Set((comps ?? []).map((c) => `${c.recurring_activity_id}:${c.fecha}`))
+  const omitidas = new Set((excs ?? []).map((e) => `${e.recurring_activity_id}:${e.fecha}`))
 
-  return expandirRecurrentes(reglas, completadas, desdeISO, hastaISO, miembros, categorias)
+  return expandirRecurrentes(reglas, completadas, desdeISO, hastaISO, miembros, categorias, omitidas)
 }

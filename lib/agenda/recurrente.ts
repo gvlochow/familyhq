@@ -38,8 +38,10 @@ export function idOcurrencia(ruleId: string, fecha: string): string {
 
 /**
  * Expande las reglas a ocurrencias (AgendaItem) dentro de [desdeISO, hastaISO]
- * inclusive. `completadas` es el set de claves `${ruleId}:${fecha}` ya hechas.
- * Descarta reglas con tipo o recurrence inválidos (drift de datos). Ordena por fecha.
+ * inclusive. `completadas` es el set de claves `${ruleId}:${fecha}` ya hechas;
+ * `omitidas` es el set de claves `${ruleId}:${fecha}` saltadas ("esta vez no"),
+ * que se descartan por completo (no se emiten). Descarta reglas con tipo o
+ * recurrence inválidos (drift de datos). Ordena por fecha.
  */
 export function expandirRecurrentes(
   reglas: ReglaRecurrenteDB[],
@@ -48,6 +50,7 @@ export function expandirRecurrentes(
   hastaISO: string,
   miembros: Map<string, MiembroRef>,
   categorias: Map<string, CategoriaRef>,
+  omitidas: Set<string> = new Set(),
 ): AgendaItem[] {
   const out: AgendaItem[] = []
   for (const regla of reglas) {
@@ -63,6 +66,7 @@ export function expandirRecurrentes(
     const categoria = regla.categoria_id ? (categorias.get(regla.categoria_id) ?? null) : null
 
     for (const fecha of ocurrencias(regla.recurrence, desdeISO, hastaISO, regla.fecha_inicio, regla.fecha_fin)) {
+      if (omitidas.has(`${regla.id}:${fecha}`)) continue // "esta vez no"
       out.push({
         id: idOcurrencia(regla.id, fecha),
         tipo: regla.tipo,
