@@ -7,7 +7,6 @@ import {
   CalendarDaysIcon,
   HouseIcon,
   ListTodoIcon,
-  SettingsIcon,
   ShoppingCartIcon,
   type LucideIcon,
 } from "lucide-react"
@@ -15,9 +14,11 @@ import {
 import { cn } from "@/lib/utils"
 
 /**
- * Barra de navegación inferior de la app autenticada (DESIGN.md: Inicio,
- * Calendario, Tareas, Compras, Ajustes; acciones al alcance del pulgar). Fija
- * abajo, ancho de la app (max-w-sm) centrado. El item activo se resuelve por la ruta.
+ * Barra de navegación inferior de la app autenticada: los cuatro destinos de uso
+ * diario (Inicio, Calendario, Tareas, Compras), al alcance del pulgar. Ajustes
+ * salió del bottom bar a un cajón lateral (AjustesLauncher en el header de cada
+ * página), por ser de uso ocasional. Fija abajo, ancho de la app (max-w-sm)
+ * centrado. El item activo se resuelve por la ruta.
  *
  * Feedback de navegación (para que tocar una tab se sienta instantáneo aunque el
  * Server Component tarde en llegar): cada tab usa useLinkStatus para resaltarse en
@@ -29,7 +30,6 @@ const TABS = [
   { href: "/calendario", label: "Calendario", Icono: CalendarDaysIcon },
   { href: "/tareas", label: "Tareas", Icono: ListTodoIcon },
   { href: "/compras", label: "Compras", Icono: ShoppingCartIcon },
-  { href: "/ajustes", label: "Ajustes", Icono: SettingsIcon },
 ] as const
 
 export function TabBar() {

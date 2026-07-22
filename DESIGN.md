@@ -30,7 +30,11 @@ discreto en el header, no protagonista.
 - Estados vacíos proponen la acción, no anuncian ausencia.
 - Onboarding no empieza en 0% si ya hubo pasos previos.
 - Uso desde el celular con una mano: acciones frecuentes en el tercio
-  inferior. Tab bar: Inicio, Calendario, Tareas, Ajustes.
+  inferior. Tab bar (4 destinos de uso diario): Inicio, Calendario, Tareas,
+  Compras. Ajustes NO va en el tab bar (uso ocasional): vive en un cajón
+  lateral que abre un engranaje en el header de cada página
+  (components/nav/ajustes-launcher.tsx). El cajón es un menú liviano (identidad
+  del hogar, enlace a la página completa de Ajustes, compartir, cerrar sesión).
 - Lista de compras y recurrentes a un toque desde el home/tab bar (son las
   funciones de uso diario que sostienen el hábito).
 
