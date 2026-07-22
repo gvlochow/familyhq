@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   expandirRecurrentes,
   idOcurrencia,
+  primeraPorRegla,
   proximaPorRegla,
   type ReglaRecurrenteDB,
 } from './recurrente'
@@ -129,5 +130,23 @@ describe('proximaPorRegla', () => {
   it('una regla con todas sus ocurrencias completadas no aparece', () => {
     const items = proximaPorRegla([oc('r1', '2026-08-05', true), oc('r1', '2026-09-05', true)])
     expect(items).toEqual([])
+  })
+})
+
+describe('primeraPorRegla (cumpleaños / fechas anuales)', () => {
+  function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'evento', titulo: 'Cumple', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
+  }
+
+  it('deja una fila por regla: la más temprana, aunque esté completada', () => {
+    const items = primeraPorRegla([
+      oc('r1', '2026-08-12', true), // completada, pero igual es su próxima
+      oc('r1', '2027-08-12'),
+      oc('r2', '2026-09-01'),
+    ])
+    expect(items.map((i) => [i.recurrenteId, i.fecha])).toEqual([
+      ['r1', '2026-08-12'],
+      ['r2', '2026-09-01'],
+    ])
   })
 })

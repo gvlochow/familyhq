@@ -108,3 +108,24 @@ export function proximaPorRegla(ocurrencias: AgendaItem[]): AgendaItem[] {
   }
   return out
 }
+
+/**
+ * Como proximaPorRegla pero SIN saltar las completadas: la ocurrencia más próxima
+ * de cada regla, exista o no una completación. Es lo que quiere la vista de
+ * cumpleaños/fechas anuales: una fecha anual no se "completa", solo llega y pasa;
+ * queremos ver su próxima aparición aunque alguien la haya marcado.
+ *
+ * Asume `ocurrencias` ordenadas por fecha ascendente: la primera de cada regla es
+ * su próxima.
+ */
+export function primeraPorRegla(ocurrencias: AgendaItem[]): AgendaItem[] {
+  const vistas = new Set<string>()
+  const out: AgendaItem[] = []
+  for (const it of ocurrencias) {
+    const rid = it.recurrenteId
+    if (!rid || vistas.has(rid)) continue
+    vistas.add(rid)
+    out.push(it)
+  }
+  return out
+}
