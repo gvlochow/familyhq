@@ -5,6 +5,7 @@ import Link from "next/link"
 import {
   CheckIcon,
   ChevronRightIcon,
+  HistoryIcon,
   HouseIcon,
   LogOutIcon,
   Share2Icon,
@@ -153,6 +154,16 @@ function AjustesDrawer({
 
         {/* Menú. */}
         <nav className="flex flex-1 flex-col gap-0.5 px-2 py-2">
+          <Link
+            href="/historial"
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <HistoryIcon className="size-4 text-muted-foreground" aria-hidden />
+            <span className="flex-1">Historial</span>
+            <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden />
+          </Link>
+
           <Link
             href="/ajustes"
             onClick={onClose}
