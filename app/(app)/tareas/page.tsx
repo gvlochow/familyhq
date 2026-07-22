@@ -3,14 +3,20 @@ import { DateTime } from "luxon"
 import { createClient } from "@/lib/supabase/server"
 import { TZ_LOCAL } from "@/lib/roster/types"
 import { mapearAgendaItem, type AgendaItem, type MiembroRef } from "@/lib/agenda/tipos"
-import { proximaPorRegla } from "@/lib/agenda/recurrente"
+import { primeraPorRegla, proximaPorRegla } from "@/lib/agenda/recurrente"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 import { cargarCategorias } from "../_lib/categorias"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
+import { ProximosCumpleanos } from "@/components/agenda/proximos-cumpleanos"
 import { AjustesLauncher } from "@/components/nav/ajustes-launcher"
 
-/** Horizonte para hallar la próxima ocurrencia de cada recurrente (cubre lo mensual). */
-const HORIZONTE_DIAS = 60
+/**
+ * Horizonte de expansión. 366 días para cubrir la próxima ocurrencia de CUALQUIER
+ * regla: lo semanal/mensual cae en los primeros días, y lo anual (cumpleaños)
+ * dentro del año. La lista principal solo muestra la próxima de cada regla, así que
+ * la ventana larga no la infla.
+ */
+const HORIZONTE_DIAS = 366
 
 /**
  * Tab Tareas: las tareas y eventos puntuales del hogar (agenda_items). Server
@@ -46,17 +52,23 @@ export default async function TareasPage() {
     .map((r) => mapearAgendaItem(r, miembrosById, categorias))
     .filter((it): it is AgendaItem => it !== null)
 
-  // Recurrentes COLAPSADAS a una fila por regla (su próxima ocurrencia pendiente), para
-  // que una actividad no inunde la lista con todas sus repeticiones.
+  // Ocurrencias recurrentes de la ventana. Se separan las ANUALES (cumpleaños /
+  // fechas anuales), que van a su propia vista a futuro, del resto (semanal/mensual),
+  // que se colapsa a una fila por regla (su próxima pendiente) en la lista principal.
   const hoy = DateTime.now().setZone(TZ_LOCAL)
+  const ocurrencias = await cargarAgendaRecurrente(
+    supabase,
+    miembrosById,
+    categorias,
+    hoy.toISODate()!,
+    hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
+  )
   const recurrentes = proximaPorRegla(
-    await cargarAgendaRecurrente(
-      supabase,
-      miembrosById,
-      categorias,
-      hoy.toISODate()!,
-      hoy.plus({ days: HORIZONTE_DIAS }).toISODate()!,
-    ),
+    ocurrencias.filter((it) => it.recurrencia?.tipo !== "anual"),
+  )
+  // Cumpleaños: próxima ocurrencia de cada regla anual (sin saltar completadas).
+  const cumples = primeraPorRegla(
+    ocurrencias.filter((it) => it.recurrencia?.tipo === "anual"),
   )
 
   // Mezcla ordenada por fecha y luego hora (sin hora primero).
@@ -87,6 +99,8 @@ export default async function TareasPage() {
         agregadoPor={agregadoPor}
         mostrarCategoria={hogar?.mostrar_categoria ?? true}
       />
+
+      <ProximosCumpleanos items={cumples} nowISO={nowISO} />
     </main>
   )
 }
