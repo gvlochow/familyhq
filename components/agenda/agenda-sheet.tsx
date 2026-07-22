@@ -72,8 +72,10 @@ export function AgendaSheet({
   const [fecha, setFecha] = useState(() =>
     editar && !editar.recurrente ? editar.fecha : DateTime.now().setZone(TZ_LOCAL).toISODate()!,
   )
-  const [todoElDia, setTodoElDia] = useState(editar ? editar.hora === null : true)
-  const [hora, setHora] = useState(editar?.hora ?? "09:00")
+  // Por defecto un item nuevo lleva HORA (la actual, redondeada); "todo el día" es
+  // la opción a marcar. En edición se respeta lo guardado.
+  const [todoElDia, setTodoElDia] = useState(editar ? editar.hora === null : false)
+  const [hora, setHora] = useState(() => editar?.hora ?? horaActualRedondeada())
   // Hora de término (solo eventos con hora). Vacío = sin término.
   const [horaFin, setHoraFin] = useState(editar?.horaFin ?? "")
   // Opt-in: marcar 'fuera' a los asignados durante el evento.
@@ -491,4 +493,12 @@ export function AgendaSheet({
       </form>
     </div>
   )
+}
+
+/** Hora local actual redondeada al múltiplo de 5 minutos siguiente ("HH:MM"). */
+function horaActualRedondeada(): string {
+  const n = DateTime.now().setZone(TZ_LOCAL)
+  const resto = n.minute % 5
+  const r = resto === 0 ? n : n.plus({ minutes: 5 - resto })
+  return r.toFormat("HH:mm")
 }
