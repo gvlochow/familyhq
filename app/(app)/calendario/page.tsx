@@ -13,6 +13,7 @@ import { CalendarView } from "@/components/calendar/calendar-view"
 import { cargarTramosEfectivos } from "../_lib/tramos-efectivos"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 import { cargarCategorias } from "../_lib/categorias"
+import { AjustesLauncher } from "@/components/nav/ajustes-launcher"
 
 /**
  * Calendario FAMILIAR del hogar. Server Component: el mes vive en la URL
@@ -131,11 +132,14 @@ export default async function CalendarioPage({
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-5 px-6 pt-8 pb-28">
       <header className="flex flex-col gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">
-            Calendario
-          </h1>
-          <p className="text-sm text-muted-foreground">Quién está fuera y qué hay agendado.</p>
+        <div className="-mr-1.5 flex items-start justify-between gap-2">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold text-foreground">
+              Calendario
+            </h1>
+            <p className="text-sm text-muted-foreground">Quién está fuera y qué hay agendado.</p>
+          </div>
+          <AjustesLauncher />
         </div>
 
         {/* Navegación de mes. */}

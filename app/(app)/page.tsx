@@ -14,6 +14,7 @@ import { cargarCategorias } from "./_lib/categorias"
 import { MemberStatusCardLive } from "@/components/home/member-status-card-live"
 import { ProximoList } from "@/components/home/proximo-list"
 import { HomeActions } from "@/components/home/home-actions"
+import { AjustesLauncher } from "@/components/nav/ajustes-launcher"
 
 const DIAS = 7
 
@@ -166,7 +167,10 @@ export default async function HomePage() {
                 {hogar?.name ?? "FamilyHQ"}
               </span>
             </div>
-            <span className="text-sm text-primary-foreground/70">{fecha}</span>
+            <div className="-mr-1.5 flex items-center gap-1">
+              <span className="text-sm text-primary-foreground/70">{fecha}</span>
+              <AjustesLauncher tone="light" />
+            </div>
           </div>
           <h1 className="mt-4 font-heading text-2xl font-semibold">
             ¿Cómo está la casa?

@@ -7,6 +7,7 @@ import { proximaPorRegla } from "@/lib/agenda/recurrente"
 import { cargarAgendaRecurrente } from "../_lib/agenda-recurrente"
 import { cargarCategorias } from "../_lib/categorias"
 import { AgendaTab } from "@/components/agenda/agenda-tab"
+import { AjustesLauncher } from "@/components/nav/ajustes-launcher"
 
 /** Horizonte para hallar la próxima ocurrencia de cada recurrente (cubre lo mensual). */
 const HORIZONTE_DIAS = 60
@@ -70,9 +71,12 @@ export default async function TareasPage() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-4 px-6 pt-8 pb-28">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">Tareas</h1>
-        <p className="text-sm text-muted-foreground">Lo que hay que hacer y lo que viene.</p>
+      <div className="-mr-1.5 flex items-start justify-between gap-2">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold text-foreground">Tareas</h1>
+          <p className="text-sm text-muted-foreground">Lo que hay que hacer y lo que viene.</p>
+        </div>
+        <AjustesLauncher />
       </div>
 
       <AgendaTab
