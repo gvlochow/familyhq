@@ -1,26 +1,29 @@
 # PROJECT_LOG — FamilyHQ
-_Última actualización: 2026-07-21 (app VIVA en prod; grupos 2 y 4 + día parcial)_
+_Última actualización: 2026-07-22 (nav 4 tabs + Ajustes lateral · 3 temas + modo oscuro · confirm propio · cumpleaños + excepciones de recurrencia · historial/puntaje)_
 
 ## ▶ PRÓXIMO PASO (handoff para el siguiente chat)
-**FamilyHQ está VIVO en producción: https://familyhq-six.vercel.app** (`main` @ `80c38fb`, todo pusheado). Verde: **tsc + lint + 125 tests + build**. Remoto Supabase con TODAS las migraciones (última `20260720130000_buffers_default_30`). **Auto-deploy: cada push a `main` redeploya prod** (proyecto conectado a GitHub); la Function Region de Vercel está en **São Paulo** (= Supabase). El MVP está armado y desplegado; ahora se trabaja el backlog post-piloto.
+**FamilyHQ está VIVO en producción: https://familyhq-six.vercel.app** (`main` @ `3bcbc5c`, todo pusheado). Verde: **tsc + lint + 169 tests + build**. Remoto Supabase con TODAS las migraciones (última `20260722120000_recurring_exceptions`). **Auto-deploy: cada push a `main` redeploya prod** (proyecto conectado a GitHub); Function Region en **São Paulo** (= Supabase). MVP desplegado; esta sesión avanzó backlog post-piloto (nav, temas/oscuro, historial, excepciones de recurrencia) y se armaron dos documentos (artifacts): **brief de rediseño de UI** (lo hará un tercero y se importa después) y **pendientes fuera del MVP**.
 
 **⚠️ La cuenta demo fue ELIMINADA por el usuario** (`onboarding.demo@familyhq.app` ya NO existe). Las sondas RLS en vivo que dependían de la "sesión demo" no sirven; el usuario va a crear una cuenta demo nueva (pendiente). Ver memoria `deploy-produccion`.
 
-**Enviado esta tanda (2026-07-17 → 21), todo en prod:**
-- **Sync al enlazar el calendario** (`fix/sync-al-enlazar`): connectCalendar materializa la disponibilidad al instante (no espera al cron). Helper compartido `app/_lib/materializar-disponibilidad.ts`.
-- **Header del Inicio full-bleed** + **feedback de navegación** (tab activa instantánea vía `useLinkStatus` + barra de progreso) en `components/nav/tab-bar.tsx`. (La lentitud real la resolvió el usuario moviendo Vercel a São Paulo.)
-- **Grupo 2 — ayuda del onboarding del calendario** (`onboarding-calendario-ayuda`): copy "rol"→"programación"; **"Dejar para más tarde"** (columna `members.calendario_omitido` + guarda); paso a paso + **link "Configuración de Google Calendar"** (abre desktop en el móvil, sin PC). FALTA: el usuario manda ~3 capturas (URL censurada) para los slots `PASOS[].imagen`.
-- **Grupo 4 — permisos y horarios** (`grupo4-permisos-buffers`): (4c) "Blanco" en la leyenda solo si hay integrante variable; (4b) un **Responsable edita el horario de los administrados** (fijo + variable) — permiso en `app/_lib/permisos-integrante.ts` (`resolverMemberObjetivo`); (4a) **buffers de traslado** salida/llegada en AMBOS tipos, default **30/30**, con pantalla de rueda `/ajustes/buffers/[memberId]`. Re-materializa al guardar buffers/horario.
-- **Estado del día en 3 niveles: casa / PARCIAL / fuera** (`feat/calendario-dia-parcial`, `80c38fb`): colapsar a un estado ocultaba los días mixtos (vuelo nocturno). `resumirDia` devuelve `{estado, parcial}`; umbrales documentados en `lib/availability/dia-resumen.ts` (RUIDO=45, JORNADA_COMPLETA=480, PISO=180). Celda: inicial hueca=parcial, sólida=fuera.
+**Enviado esta tanda (2026-07-21 → 22), todo en prod:**
+- **Grupo 3 — Entrada al hogar** (`07a8df0`): código de hogar + crear/unirse + solicitar/aprobar/bloquear + invitación por email (`inviteUserByEmail` + `/auth/confirm`) + vinculación a perfil administrado + banner de invitaciones pendientes (`mis_invitaciones`). Ver `grupo3-entrada-hogar`. FALTA E2E manual (cuenta demo + correo).
+- **Nav de 4 tabs + Ajustes en cajón lateral** (`7deafd4`): bottom bar = Inicio/Calendario/Tareas/Compras; Ajustes salió a un cajón que abre un engranaje en el header (`components/nav/ajustes-launcher.tsx` + `ajustes-menu.tsx`). Ver `nav-4-tabs-ajustes-lateral`.
+- **3 temas de color + modo claro/oscuro/sistema** (`f97cf26`): Puerto/Bosque/Ciruela, por dispositivo (localStorage), selector en Ajustes → Apariencia. Tokens en `globals.css` (`:root`/`.dark`/`[data-theme]`); script anti-FOUC + `ThemeSync`; scrims/discos de estado con contraparte `dark:`. Ver `temas-modo-oscuro`.
+- **Notas de aeropuerto** (`285b6af`, migración `20260721220000`) + **salir/eliminar del hogar** (`fb7d142`) + **estado de varios integrantes** (`4245994`) + **hora de término** (`7151a5b`) + **evento marca "fuera"** (`4671563`) + **tiempo real / día parcial** (sesión previa). Detalle en `backlog-ideas-2026-07`.
+- **Diálogo de confirmación propio** (`ce954f4`): `useConfirmar()` reemplaza `window.confirm` (que muestra el dominio); provider en `(app)/layout`. Ver `confirm-dialog-propio`.
+- **Fix: quitar integrante sin correo** (`4cb83fa`): `.neq("user_id", ...)` descartaba filas `user_id` null (NULL <> uuid = NULL); ahora `.or(user_id.is.null,user_id.neq.<uuid>)`.
+- **Cumpleaños/fechas anuales a futuro** (`9e47d3d`) + **editar inline** (`a0bff69`): sección en Tareas con la próxima ocurrencia anual (366d, `primeraPorRegla`); tocar edita, bote elimina.
+- **Excepciones de recurrencia — omitir una ocurrencia** (`355e0fb`, migración `20260722120000`): tabla `recurring_exceptions`; `expandirRecurrentes` gana set `omitidas`; respetado en la agenda Y en la capa de disponibilidad. Ver `agenda-recurrencia`.
+- **Historial + puntaje de tareas** (`2671b18`) + **filtro de periodo** (`3bcbc5c`): página `/historial` desde el cajón lateral; ranking por integrante (semana/mes/todo) + actividad reciente. Ver `historial-tareas`.
 
 **Pendientes (resumen; detalle en memorias):**
-- 🔴 **Grupo 3 — Entrada al hogar** (la grande): código de hogar + crear/unirse + solicitar/aprobar/bloquear + invitación por email. Toca esquema + seguridad.
-- 🟡 **Nav 4 tabs + Ajustes lateral**; **temas / modo oscuro**; **#2 aeropuerto en el detalle del día** (ver "termina en SCL", solo visual — `backlog-ideas-2026-07`); **#1a tiempo real** (tarjeta se auto-actualiza con el reloj).
-- 🟢 **Recurrencia anual** (cumpleaños); **link "compartir la app"** en Ajustes.
-- ⏸️ **Google Calendar → agenda** (stand-by, lo piensa el usuario — `google-calendar-agenda-standby`).
-- 🧑‍💻 **Tareas del usuario:** crear cuenta demo nueva; 3 capturas de Google Calendar; confirmar sync de Pablo; revisar en el teléfono la rueda de buffers y la inicial "hueca".
-- 🧹 **Deuda menor:** excepciones de recurrencia; historial/puntaje de tareas; **CSP Report-Only → forzar** (`headers-seguridad-pendiente`); almuerzo con buffer propio en el fijo.
-- 🔮 **Post-MVP:** PostHog (`posthog-analytics-evaluation`); Billing/Stripe; temas premium (`temas-configurables-idea`).
+- 🧹 **Deuda menor restante:** mover/editar UNA ocurrencia recurrente (no solo omitirla — necesita tabla de override); **CSP Report-Only → forzar** (revisar reportes en prod primero — `headers-seguridad-pendiente`); almuerzo con buffer propio en el fijo.
+- 🧱 **Infra que no existe:** notificaciones/recordatorios (push/email; `payment_link`/`reminder_offset_hours` reservados sin uso); correo custom de invitación.
+- ⏸️ **Google Calendar → agenda** (stand-by — `google-calendar-agenda-standby`); **transferir propiedad / eliminar hogar** (hoy el dueño no puede salir).
+- 🎨 **Rediseño de UI:** lo hará un tercero y se importa después. Brief y reglas (tokens, stack, contratos) en el artifact de handoff. La arquitectura por capas lo permite en paralelo.
+- 🧑‍💻 **Tareas del usuario:** crear cuenta demo nueva + E2E de entrada al hogar; 3 capturas de Google Calendar (onboarding); revisar en el teléfono (buffers, inicial "hueca", temas/oscuro); definir formato de entrega del diseñador (Figma vs. código).
+- 🔮 **Post-MVP:** dominio propio + deliverability de correo; PostHog (`posthog-analytics-evaluation`); Billing/Stripe; temas premium (`temas-configurables-idea`); política de privacidad/términos; monitoreo de errores. Detalle en el artifact "Pendientes fuera del MVP".
 
 **Loop de trabajo:** cada feature en su rama → verde (tsc+lint+tests+build) → merge `--no-ff` a `main` → push (Vercel redeploya solo). Migraciones al remoto con `pnpm supabase db push --linked --yes` (necesita red; el warning de Docker sobre el "catálogo" es inofensivo, sin Docker). Antes de una feature con peso, **proponer el modelo y confirmarlo con el usuario**. Verificación en vivo pendiente de la cuenta demo nueva.
 
