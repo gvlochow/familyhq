@@ -225,6 +225,10 @@
   }
   html {
     @apply font-sans;
+    /* Sensación de app: sin rebote de scroll ni pull-to-refresh (junto al
+       viewport sin zoom en app/layout.tsx), y sin resaltado gris al tocar. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

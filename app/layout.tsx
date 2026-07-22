@@ -35,6 +35,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#284b63",
+  // App-like: sin zoom por gestos (el pellizco descuadraba el layout y el bottom
+  // nav) y el contenido ajustado a la pantalla, incluida el área bajo el notch.
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
