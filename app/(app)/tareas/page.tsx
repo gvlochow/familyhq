@@ -100,7 +100,13 @@ export default async function TareasPage() {
         mostrarCategoria={hogar?.mostrar_categoria ?? true}
       />
 
-      <ProximosCumpleanos items={cumples} nowISO={nowISO} />
+      <ProximosCumpleanos
+        items={cumples}
+        nowISO={nowISO}
+        miembros={miembrosRef}
+        categorias={[...categorias.values()]}
+        agregadoPor={agregadoPor}
+      />
     </main>
   )
 }

@@ -1,33 +1,42 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { DateTime } from "luxon"
 import { CakeIcon, Trash2Icon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
-import type { AgendaItem } from "@/lib/agenda/tipos"
+import type { AgendaItem, MiembroRef } from "@/lib/agenda/tipos"
+import type { CategoriaRef } from "@/lib/agenda/categorias"
 import { eliminarActividadRecurrente } from "@/app/(app)/tareas/actions"
 import { useConfirmar } from "@/components/ui/confirm-dialog"
+import { AgendaSheet } from "./agenda-sheet"
 import { cn } from "@/lib/utils"
 
 /**
  * "Cumpleaños y fechas anuales": la vista a FUTURO de las reglas recurrentes de
  * tipo anual. La lista principal de Tareas solo expande una ventana corta (~60d),
  * así que un cumpleaños lejano no se vería; acá se muestra la próxima ocurrencia de
- * cada regla anual (ventana de 366d), ordenada por proximidad. Solo lectura +
- * eliminar (crear/editar sigue en el flujo normal, con el patrón "Cada año").
+ * cada regla anual (ventana de 366d), ordenada por proximidad. Tocar una fila la
+ * edita (misma hoja que Tareas, con el patrón "Cada año"); el bote la elimina.
  */
 export function ProximosCumpleanos({
   items,
   nowISO,
+  miembros,
+  categorias,
+  agregadoPor,
 }: {
   items: AgendaItem[]
   nowISO: string
+  miembros: MiembroRef[]
+  categorias: CategoriaRef[]
+  agregadoPor: string | null
 }) {
   const router = useRouter()
   const confirmar = useConfirmar()
   const [pendiente, startTransition] = useTransition()
+  const [editando, setEditando] = useState<AgendaItem | null>(null)
 
   if (items.length === 0) return null
 
@@ -59,10 +68,21 @@ export function ProximosCumpleanos({
             item={item}
             nowISO={nowISO}
             borde={i > 0}
+            onEditar={setEditando}
             onBorrar={borrar}
           />
         ))}
       </ul>
+
+      {editando && (
+        <AgendaSheet
+          miembros={miembros}
+          categorias={categorias}
+          agregadoPor={agregadoPor}
+          editar={editando}
+          onClose={() => setEditando(null)}
+        />
+      )}
     </section>
   )
 }
@@ -71,11 +91,13 @@ function FilaCumple({
   item,
   nowISO,
   borde,
+  onEditar,
   onBorrar,
 }: {
   item: AgendaItem
   nowISO: string
   borde: boolean
+  onEditar: (i: AgendaItem) => void
   onBorrar: (i: AgendaItem) => void
 }) {
   const fecha = DateTime.fromISO(item.fecha, { zone: TZ_LOCAL }).startOf("day")
@@ -96,13 +118,18 @@ function FilaCumple({
         <CakeIcon className="size-4" />
       </span>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={() => onEditar(item)}
+        aria-label={`Editar ${item.titulo}`}
+        className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+      >
         <span className="truncate text-sm font-medium text-foreground">{item.titulo}</span>
         <span className="truncate text-xs text-muted-foreground">
           {fechaTxt} ·{" "}
           <span className={cn(pronto && "font-medium text-foreground")}>{cuando}</span>
         </span>
-      </div>
+      </button>
 
       <button
         type="button"
