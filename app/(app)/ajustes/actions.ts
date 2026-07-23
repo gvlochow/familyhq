@@ -85,6 +85,28 @@ export async function actualizarMostrarCategoria(valor: boolean): Promise<Result
 }
 
 /**
+ * Preferencia del hogar: ocultar por defecto la simbología (leyenda de colores)
+ * del calendario. El "?" del calendario la muestra igual bajo demanda. Solo visual.
+ */
+export async function actualizarOcultarSimbologia(valor: boolean): Promise<Resultado> {
+  const supabase = await createClient()
+  const householdId = await hogarActual(supabase)
+  if (!householdId) return { error: "No perteneces a un hogar." }
+
+  const { data, error } = await supabase
+    .from("households")
+    .update({ ocultar_simbologia: valor })
+    .eq("id", householdId)
+    .select("id")
+    .maybeSingle()
+  if (error || !data) return { error: "No se pudo guardar. Intenta de nuevo." }
+
+  revalidatePath("/ajustes")
+  revalidatePath("/calendario")
+  return {}
+}
+
+/**
  * Quita a un integrante del hogar (perfil administrado o con cuenta). La
  * autorización la aplica la RLS members_delete: solo un responsable puede quitar
  * a OTRO, nunca al dueño. Si no borró ninguna fila, no tenía permiso (o el objetivo

@@ -32,7 +32,7 @@ export default async function CalendarioPage({
   const [{ data: { user } }, { data: members }, { data: hogar }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("members").select("id, display_name, user_id, tipo_horario"),
-    supabase.from("households").select("mostrar_categoria").limit(1).maybeSingle(),
+    supabase.from("households").select("mostrar_categoria, ocultar_simbologia").limit(1).maybeSingle(),
   ])
   const integrantes = members ?? []
   // El estado "Blanco" (por_confirmar) solo lo genera el clasificador variable;
@@ -174,6 +174,7 @@ export default async function CalendarioPage({
           agregadoPor={agregadoPor}
           mostrarCategoria={hogar?.mostrar_categoria ?? true}
           hayVariable={hayVariable}
+          ocultarSimbologia={hogar?.ocultar_simbologia ?? false}
         />
       ) : (
         <p className="text-sm text-muted-foreground">

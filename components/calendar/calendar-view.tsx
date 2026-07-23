@@ -33,6 +33,7 @@ export function CalendarView({
   agregadoPor,
   mostrarCategoria,
   hayVariable,
+  ocultarSimbologia,
 }: {
   grilla: GrillaMesFamilia
   miembros: MiembroCalendario[]
@@ -42,6 +43,7 @@ export function CalendarView({
   agregadoPor: string | null
   mostrarCategoria: boolean
   hayVariable: boolean
+  ocultarSimbologia: boolean
 }) {
   const router = useRouter()
   const [dia, setDia] = useState<string | null>(null)
@@ -73,6 +75,7 @@ export function CalendarView({
         agendaPorDia={agendaPorDia}
         onDiaClick={setDia}
         hayVariable={hayVariable}
+        ocultarSimbologia={ocultarSimbologia}
       />
 
       {/* Botón flotante para agregar tarea/evento. */}
