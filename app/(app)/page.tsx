@@ -172,7 +172,7 @@ export default async function HomePage() {
               <AjustesLauncher tone="light" />
             </div>
           </div>
-          <h1 className="mt-4 font-heading text-2xl font-semibold">
+          <h1 className="mt-4 font-heading text-xl font-semibold">
             ¿Cómo está la casa?
           </h1>
         </div>

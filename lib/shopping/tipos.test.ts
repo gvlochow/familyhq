@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapearItem, separarItems, type FilaItemDB, type ItemCompra } from './tipos'
+import { mapearItem, sanearCantidad, separarItems, type FilaItemDB, type ItemCompra } from './tipos'
 
 const miembros = new Map<string, string>([
   ['m1', 'Gino'],
@@ -49,5 +49,26 @@ describe('separarItems', () => {
 
   it('lista vacía devuelve ambos grupos vacíos', () => {
     expect(separarItems([])).toEqual({ pendientes: [], comprados: [] })
+  })
+})
+
+describe('sanearCantidad', () => {
+  it('deja solo dígitos', () => {
+    expect(sanearCantidad('2 kg')).toBe('2')
+    expect(sanearCantidad('abc10def')).toBe('10')
+  })
+  it('permite un separador decimal y normaliza la coma', () => {
+    expect(sanearCantidad('1,5')).toBe('1.5')
+    expect(sanearCantidad('0.5')).toBe('0.5')
+  })
+  it('conserva solo el primer punto', () => {
+    expect(sanearCantidad('1.2.3')).toBe('1.23')
+  })
+  it('deja un punto final para seguir tecleando', () => {
+    expect(sanearCantidad('1.')).toBe('1.')
+  })
+  it('vacío si no hay nada numérico', () => {
+    expect(sanearCantidad('kg')).toBe('')
+    expect(sanearCantidad('')).toBe('')
   })
 })

@@ -103,15 +103,6 @@ export function AgendaTab({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95"
-      >
-        <PlusIcon className="size-5" aria-hidden />
-        Agregar tarea o evento
-      </button>
-
       {pendientes.length === 0 && hechas.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
           Nada agendado todavía. Agrega la primera tarea o evento.
@@ -164,6 +155,21 @@ export function AgendaTab({
           onClose={() => setBorrarRec(null)}
         />
       )}
+
+      {/* Acción principal fija sobre la tab bar, al alcance del pulgar (como el
+          Inicio). El main de la página deja padding inferior para no taparse. */}
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30">
+        <div className="mx-auto w-full max-w-sm px-6">
+          <button
+            type="button"
+            onClick={() => setAbierto(true)}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95"
+          >
+            <PlusIcon className="size-5" aria-hidden />
+            Agregar tarea o evento
+          </button>
+        </div>
+      </div>
     </>
   )
 }
