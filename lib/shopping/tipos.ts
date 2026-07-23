@@ -40,6 +40,20 @@ export function mapearItem(r: FilaItemDB, miembros: Map<string, string>): ItemCo
 }
 
 /**
+ * Sanea la cantidad a un número con decimales: solo dígitos y UN separador
+ * decimal (la coma se normaliza a punto). Se conserva el primer punto y se
+ * descartan los demás. Deja un punto final (p. ej. "1.") para que el usuario
+ * pueda seguir tecleando; el guardado en el servidor lo recorta. Cadena vacía si
+ * no queda nada.
+ */
+export function sanearCantidad(raw: string): string {
+  const s = raw.replace(",", ".").replace(/[^\d.]/g, "")
+  const i = s.indexOf(".")
+  if (i === -1) return s
+  return s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "")
+}
+
+/**
  * Separa la lista en pendientes (arriba) y comprados (al fondo, tachados),
  * preservando el orden de entrada de cada grupo. La pantalla ya trae los ítems
  * ordenados por created_at; esto solo los agrupa por estado.

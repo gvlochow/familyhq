@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { sanearCantidad } from "@/lib/shopping/tipos"
 import { obtenerListaActivaId } from "../_lib/lista-compras"
 
 /** Resultado uniforme de las acciones: {error} legible o {} si salió bien. */
@@ -10,6 +11,15 @@ type Resultado = { error?: string }
 
 const MAX_NOMBRE = 120
 const MAX_CANTIDAD = 40
+
+/**
+ * Cantidad final para guardar: número con decimales (dígitos + un punto), sin el
+ * punto final que se deja mientras se teclea. Vacía -> null. El cliente ya la
+ * sanea; esto lo garantiza server-side.
+ */
+function cantidadParaGuardar(raw: string | null | undefined): string | null {
+  return sanearCantidad(raw ?? "").replace(/\.$/, "").slice(0, MAX_CANTIDAD) || null
+}
 
 /** Miembro (id + household) del usuario autenticado, para household_id y added_by. */
 async function miembroActual(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -36,8 +46,7 @@ export async function agregarItem(input: {
 
   const nombre = input.nombre.trim().slice(0, MAX_NOMBRE)
   if (!nombre) return { error: "Escribe qué agregar." }
-  // Cantidad = solo números (el input del cliente ya filtra; esto lo garantiza server-side).
-  const cantidad = input.cantidad?.replace(/\D/g, "").slice(0, MAX_CANTIDAD) || null
+  const cantidad = cantidadParaGuardar(input.cantidad)
 
   const listaId = await obtenerListaActivaId(supabase, miembro.household_id)
   if (!listaId) return { error: "No se pudo abrir la lista." }
@@ -65,8 +74,7 @@ export async function editarItem(
 
   const nombre = input.nombre.trim().slice(0, MAX_NOMBRE)
   if (!nombre) return { error: "Escribe qué agregar." }
-  // Cantidad = solo números (el input del cliente ya filtra; esto lo garantiza server-side).
-  const cantidad = input.cantidad?.replace(/\D/g, "").slice(0, MAX_CANTIDAD) || null
+  const cantidad = cantidadParaGuardar(input.cantidad)
 
   const { data, error } = await supabase
     .from("shopping_items")

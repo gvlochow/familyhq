@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import {
   CircleIcon,
   CircleCheckIcon,
+  MinusIcon,
   PlusIcon,
   Trash2Icon,
 } from "lucide-react"
 
-import { separarItems, type ItemCompra } from "@/lib/shopping/tipos"
+import { sanearCantidad, separarItems, type ItemCompra } from "@/lib/shopping/tipos"
 import {
   agregarItem,
   editarItem,
@@ -26,7 +27,7 @@ export function ListaCompras({ items }: { items: ItemCompra[] }) {
   const confirmar = useConfirmar()
   const [pendiente, startTransition] = useTransition()
   const [nombre, setNombre] = useState("")
-  const [cantidad, setCantidad] = useState("")
+  const [cantidad, setCantidad] = useState("1")
   const [error, setError] = useState<string | null>(null)
   const [editandoId, setEditandoId] = useState<string | null>(null)
 
@@ -43,7 +44,7 @@ export function ListaCompras({ items }: { items: ItemCompra[] }) {
         return
       }
       setNombre("")
-      setCantidad("")
+      setCantidad("1")
       router.refresh()
     })
   }
@@ -94,15 +95,7 @@ export function ListaCompras({ items }: { items: ItemCompra[] }) {
             aria-label="Qué agregar"
             className="h-11 flex-1"
           />
-          <Input
-            value={cantidad}
-            onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ""))}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="Cant."
-            aria-label="Cantidad (opcional, solo números)"
-            className="h-11 w-20 shrink-0"
-          />
+          <CantidadStepper value={cantidad} onChange={setCantidad} />
           <button
             type="submit"
             disabled={!nombre.trim() || pendiente}
@@ -259,7 +252,7 @@ function FilaEdicion({
   onRefresh: () => void
 }) {
   const [nombre, setNombre] = useState(item.nombre)
-  const [cantidad, setCantidad] = useState(item.cantidad ?? "")
+  const [cantidad, setCantidad] = useState(item.cantidad ?? "1")
   const [pendiente, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -296,15 +289,7 @@ function FilaEdicion({
           autoFocus
           className="h-10 flex-1"
         />
-        <Input
-          value={cantidad}
-          onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ""))}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Cant."
-          aria-label="Cantidad (opcional, solo números)"
-          className="h-10 w-20 shrink-0"
-        />
+        <CantidadStepper value={cantidad} onChange={setCantidad} />
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -324,5 +309,52 @@ function FilaEdicion({
         {error && <span className="text-xs text-destructive">{error}</span>}
       </div>
     </form>
+  )
+}
+
+/**
+ * Control de cantidad: [−] [input] [+]. Los botones suben/bajan de a 1 (mínimo 1);
+ * el input acepta decimales (inputMode="decimal", saneado con sanearCantidad). La
+ * cantidad se guarda como texto ("1", "1.5").
+ */
+function CantidadStepper({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const paso = (delta: number) => {
+    const n = parseFloat(value.replace(",", ".")) || 0
+    const siguiente = Math.max(1, Math.round((n + delta) * 100) / 100)
+    onChange(String(siguiente))
+  }
+
+  return (
+    <div className="flex h-11 shrink-0 items-center rounded-xl border border-border">
+      <button
+        type="button"
+        aria-label="Menos uno"
+        onClick={() => paso(-1)}
+        className="flex h-full w-9 items-center justify-center rounded-l-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <MinusIcon className="size-4" aria-hidden />
+      </button>
+      <input
+        value={value}
+        onChange={(e) => onChange(sanearCantidad(e.target.value))}
+        inputMode="decimal"
+        aria-label="Cantidad"
+        className="h-full w-9 border-x border-border bg-transparent text-center text-sm outline-none focus:bg-muted/40"
+      />
+      <button
+        type="button"
+        aria-label="Más uno"
+        onClick={() => paso(1)}
+        className="flex h-full w-9 items-center justify-center rounded-r-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <PlusIcon className="size-4" aria-hidden />
+      </button>
+    </div>
   )
 }
