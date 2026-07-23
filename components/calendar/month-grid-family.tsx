@@ -5,6 +5,7 @@ import type {
 import type { AgendaItem } from "@/lib/agenda/tipos"
 import { COLOR_CATEGORIA_DEFECTO, hexCategoria } from "@/lib/agenda/categorias"
 import { LETRAS_DIA } from "@/lib/availability/dias"
+import { LeyendaCalendario } from "./leyenda-calendario"
 import { cn } from "@/lib/utils"
 
 /** Máximo de puntos de categoría en una celda (superpuestos para no llenar el box). */
@@ -49,6 +50,7 @@ export function MonthGridFamily({
   agendaPorDia,
   onDiaClick,
   hayVariable = true,
+  ocultarSimbologia = false,
 }: {
   grilla: GrillaMesFamilia
   miembros: { id: string; inicial: string; nombre: string }[]
@@ -56,6 +58,8 @@ export function MonthGridFamily({
   onDiaClick?: (fecha: string) => void
   /** ¿Hay algún integrante variable? Si no, "Blanco" nunca ocurre y se oculta de la leyenda. */
   hayVariable?: boolean
+  /** Preferencia del hogar: la leyenda arranca oculta (el "?" la muestra). */
+  ocultarSimbologia?: boolean
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -156,46 +160,11 @@ export function MonthGridFamily({
         })}
       </div>
 
-      {/* Leyenda: quién es cada inicial + qué significa el color. */}
-      <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
-        <ul className="flex flex-wrap gap-x-3 gap-y-1.5">
-          {miembros.map((m) => (
-            <li key={m.id} className="flex items-center gap-1.5">
-              <span className="flex size-4 items-center justify-center rounded bg-muted text-[9px] font-semibold text-foreground">
-                {m.inicial}
-              </span>
-              <span className="text-xs text-muted-foreground">{m.nombre}</span>
-            </li>
-          ))}
-        </ul>
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
-          <li className="flex items-center gap-1.5">
-            <span className="size-3 rounded-sm bg-primary" aria-hidden />
-            <span className="text-xs text-muted-foreground">Fuera</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span className="size-3 rounded-sm border border-primary" aria-hidden />
-            <span className="text-xs text-muted-foreground">Parte del día fuera</span>
-          </li>
-          {hayVariable && (
-            <li className="flex items-center gap-1.5">
-              <span className="size-3 rounded-sm bg-accent" aria-hidden />
-              <span className="text-xs text-muted-foreground">Blanco (hasta 21:00)</span>
-            </li>
-          )}
-          <li className="flex items-center gap-1.5">
-            <span className="size-3 rounded-sm bg-secondary/60" aria-hidden />
-            <span className="text-xs text-muted-foreground">En casa (sin marca)</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span className="flex -space-x-1" aria-hidden>
-              <span className="size-2 rounded-full ring-1 ring-background" style={{ backgroundColor: hexCategoria("ambar") }} />
-              <span className="size-2 rounded-full ring-1 ring-background" style={{ backgroundColor: hexCategoria("celeste") }} />
-            </span>
-            <span className="text-xs text-muted-foreground">Agenda (color = categoría)</span>
-          </li>
-        </ul>
-      </div>
+      <LeyendaCalendario
+        miembros={miembros}
+        hayVariable={hayVariable}
+        ocultarSimbologia={ocultarSimbologia}
+      />
     </div>
   )
 }

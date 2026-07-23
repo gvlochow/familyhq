@@ -410,6 +410,7 @@ export type Database = {
           join_code: string
           mostrar_categoria: boolean
           name: string
+          ocultar_simbologia: boolean
           onboarding_completed: boolean
           plan: string
           subscription_ref: string | null
@@ -421,6 +422,7 @@ export type Database = {
           join_code?: string
           mostrar_categoria?: boolean
           name: string
+          ocultar_simbologia?: boolean
           onboarding_completed?: boolean
           plan?: string
           subscription_ref?: string | null
@@ -432,6 +434,7 @@ export type Database = {
           join_code?: string
           mostrar_categoria?: boolean
           name?: string
+          ocultar_simbologia?: boolean
           onboarding_completed?: boolean
           plan?: string
           subscription_ref?: string | null

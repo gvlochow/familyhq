@@ -34,7 +34,7 @@ export default async function AjustesPage() {
   const [{ data: hogar }, { data: members }, categorias] = await Promise.all([
     supabase
       .from("households")
-      .select("name, mostrar_categoria, join_code")
+      .select("name, mostrar_categoria, ocultar_simbologia, join_code")
       .limit(1)
       .maybeSingle(),
     supabase.from("members").select("id, display_name, user_id, rol, tipo_horario, is_owner"),
@@ -151,7 +151,10 @@ export default async function AjustesPage() {
 
       <CategoriasSection categorias={[...categorias.values()]} />
 
-      <AgendaPrefsSection mostrarCategoria={hogar?.mostrar_categoria ?? true} />
+      <AgendaPrefsSection
+        mostrarCategoria={hogar?.mostrar_categoria ?? true}
+        ocultarSimbologia={hogar?.ocultar_simbologia ?? false}
+      />
 
       <AparienciaSection />
 
