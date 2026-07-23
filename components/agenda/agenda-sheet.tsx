@@ -23,7 +23,7 @@ import {
 import { CategoriaPicker } from "./categoria-picker"
 import { cn } from "@/lib/utils"
 
-const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Tarea", evento: "Evento" }
+const ETIQUETA: Record<TipoAgenda, string> = { tarea: "Actividad", evento: "Evento" }
 
 /** Patrón de repetición elegible en el formulario. */
 type Patron = "mensual" | "semanal" | "anual"
@@ -181,7 +181,7 @@ export function AgendaSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={esEdicion ? "Editar tarea o evento" : "Nueva tarea o evento"}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={esEdicion ? "Editar actividad o evento" : "Nueva actividad o evento"}>
       <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-foreground/40 backdrop-blur-[1px] dark:bg-black/60" />
 
       <form

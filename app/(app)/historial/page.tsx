@@ -122,10 +122,10 @@ export default async function HistorialPage({
         : "Puntaje de siempre"
   const vacioTxt =
     periodo === "semana"
-      ? "Nadie completó tareas esta semana."
+      ? "Nadie completó actividades esta semana."
       : periodo === "mes"
-        ? "Nadie completó tareas este mes."
-        : "Cuando alguien complete una tarea, aparece acá con su puntaje."
+        ? "Nadie completó actividades este mes."
+        : "Cuando alguien complete una actividad, aparece acá con su puntaje."
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col gap-6 px-6 pt-8 pb-28">
@@ -196,7 +196,7 @@ export default async function HistorialPage({
                       {m.conteo}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {m.conteo === 1 ? "tarea" : "tareas"}
+                      {m.conteo === 1 ? "actividad" : "actividades"}
                     </span>
                   </li>
                 )

@@ -81,7 +81,7 @@ export function CalendarView({
           <button
             type="button"
             onClick={() => setAgregar(true)}
-            aria-label="Agregar tarea o evento"
+            aria-label="Agregar actividad o evento"
             className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-opacity hover:opacity-95"
           >
             <PlusIcon className="size-6" aria-hidden />

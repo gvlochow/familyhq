@@ -105,7 +105,7 @@ export function AgendaTab({
     <>
       {pendientes.length === 0 && hechas.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          Nada agendado todavía. Agrega la primera tarea o evento.
+          Nada agendado todavía. Agrega la primera actividad o evento.
         </p>
       ) : (
         <ul className={cn("flex flex-col", pendiente && "opacity-60")}>
@@ -166,7 +166,7 @@ export function AgendaTab({
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-95"
           >
             <PlusIcon className="size-5" aria-hidden />
-            Agregar tarea o evento
+            Agregar actividad o evento
           </button>
         </div>
       </div>

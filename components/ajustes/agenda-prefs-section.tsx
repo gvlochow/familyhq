@@ -42,7 +42,7 @@ export function AgendaPrefsSection({ mostrarCategoria }: { mostrarCategoria: boo
             Mostrar el nombre de la categoría
           </span>
           <span className="text-xs text-muted-foreground">
-            Junto al título de cada tarea o evento. El punto de color se muestra igual.
+            Junto al título de cada actividad o evento. El punto de color se muestra igual.
           </span>
         </div>
 

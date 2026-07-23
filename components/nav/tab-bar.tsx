@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils"
 const TABS = [
   { href: "/", label: "Inicio", Icono: HouseIcon },
   { href: "/calendario", label: "Calendario", Icono: CalendarDaysIcon },
-  { href: "/tareas", label: "Tareas", Icono: ListTodoIcon },
+  { href: "/tareas", label: "Actividades", Icono: ListTodoIcon },
   { href: "/compras", label: "Compras", Icono: ShoppingCartIcon },
 ] as const
 
