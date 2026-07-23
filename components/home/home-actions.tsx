@@ -46,7 +46,7 @@ export function HomeActions({
             <button
               type="button"
               onClick={() => setAgregar(true)}
-              aria-label="Agregar tarea o evento"
+              aria-label="Agregar actividad o evento"
               className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted"
             >
               <PlusIcon className="size-5" aria-hidden />
