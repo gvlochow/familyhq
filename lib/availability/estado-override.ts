@@ -74,3 +74,21 @@ export function intervaloDesde(
 
   return { inicioUtc: inicio.toUTC().toISO()!, finUtc: fin.toUTC().toISO()! }
 }
+
+/**
+ * Intervalo UTC [inicioUtc, finUtc) para una ventana horaria explícita ("HH:MM" a
+ * "HH:MM") del día local `fechaISO`. No cruza medianoche: si fin ≤ inicio, el
+ * llamador debe rechazarlo (la Server Action también valida fin > inicio).
+ */
+export function intervaloHorario(
+  fechaISO: string,
+  inicioHHMM: string,
+  finHHMM: string,
+): { inicioUtc: string; finUtc: string } {
+  const dia = DateTime.fromISO(fechaISO, { zone: TZ_LOCAL }).startOf('day')
+  const [hi, mi] = inicioHHMM.split(':').map(Number)
+  const [hf, mf] = finHHMM.split(':').map(Number)
+  const inicio = dia.set({ hour: hi, minute: mi })
+  const fin = dia.set({ hour: hf, minute: mf })
+  return { inicioUtc: inicio.toUTC().toISO()!, finUtc: fin.toUTC().toISO()! }
+}

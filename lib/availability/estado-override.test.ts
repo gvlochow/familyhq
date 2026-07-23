@@ -4,6 +4,7 @@ import {
   esEstadoOverride,
   esPresetFin,
   intervaloDesde,
+  intervaloHorario,
 } from './estado-override'
 
 const TZ = 'America/Santiago'
@@ -61,5 +62,14 @@ describe('intervaloDesde', () => {
       const { inicioUtc, finUtc } = intervaloDesde(p, tarde)
       expect(DateTime.fromISO(finUtc) > DateTime.fromISO(inicioUtc)).toBe(true)
     }
+  })
+})
+
+describe('intervaloHorario', () => {
+  it('ancla la ventana "HH:MM" al día local y la pasa a UTC', () => {
+    const { inicioUtc, finUtc } = intervaloHorario('2026-07-14', '15:00', '18:30')
+    // Julio en Chile = UTC-4: 15:00 local = 19:00Z, 18:30 = 22:30Z.
+    expect(inicioUtc).toBe('2026-07-14T19:00:00.000Z')
+    expect(finUtc).toBe('2026-07-14T22:30:00.000Z')
   })
 })

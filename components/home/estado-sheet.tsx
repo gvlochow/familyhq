@@ -11,6 +11,7 @@ import {
   PRESETS_FIN,
   PRESET_LABEL,
   intervaloDesde,
+  intervaloHorario,
   type EstadoOverride,
   type PresetFin,
 } from "@/lib/availability/estado-override"
@@ -55,8 +56,19 @@ export function EstadoSheet({
   )
   const [estado, setEstado] = useState<EstadoOverride>("en_casa")
   const [preset, setPreset] = useState<PresetFin>("3h")
+  // "ahora" = desde ahora hasta un preset; "horario" = ventana explícita de hoy.
+  const [modo, setModo] = useState<"ahora" | "horario">("ahora")
+  const [horaInicio, setHoraInicio] = useState(() =>
+    DateTime.fromISO(nowISO).setZone(TZ_LOCAL).toFormat("HH:mm"),
+  )
+  const [horaFin, setHoraFin] = useState(() =>
+    DateTime.fromISO(nowISO).setZone(TZ_LOCAL).plus({ hours: 1 }).toFormat("HH:mm"),
+  )
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+
+  const fechaHoy = DateTime.fromISO(nowISO).setZone(TZ_LOCAL).toISODate()!
+  const horarioInvalido = modo === "horario" && horaFin <= horaInicio
 
   const seleccionados = editables.filter((m) => memberIds.has(m.id))
   const hastaTexto = useMemo(() => describirFin(preset, nowISO), [preset, nowISO])
@@ -96,9 +108,16 @@ export function EstadoSheet({
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     if (memberIds.size === 0) return
+    if (horarioInvalido) {
+      setError("El término debe ser posterior al inicio.")
+      return
+    }
     setGuardando(true)
     setError(null)
-    const { inicioUtc, finUtc } = intervaloDesde(preset, nowISO)
+    const { inicioUtc, finUtc } =
+      modo === "horario"
+        ? intervaloHorario(fechaHoy, horaInicio, horaFin)
+        : intervaloDesde(preset, nowISO)
     const res = await actualizarEstados({
       memberIds: [...memberIds],
       estado: estadoEfectivo,
@@ -225,39 +244,87 @@ export function EstadoSheet({
           </div>
         </fieldset>
 
-        {/* ¿Hasta cuándo? */}
+        {/* ¿Cuándo? Desde ahora (preset) o una ventana horaria explícita. */}
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-foreground">¿Hasta cuándo?</legend>
-          <div className="grid grid-cols-2 gap-2">
-            {PRESETS_FIN.map((p) => {
-              const activo = preset === p
-              return (
+          <div className="flex items-center justify-between">
+            <legend className="text-sm font-medium text-foreground">¿Cuándo?</legend>
+            <div className="flex rounded-lg bg-muted p-0.5 text-xs font-medium">
+              {(["ahora", "horario"] as const).map((m) => (
                 <button
-                  key={p}
+                  key={m}
                   type="button"
-                  onClick={() => setPreset(p)}
-                  aria-pressed={activo}
+                  onClick={() => setModo(m)}
+                  aria-pressed={modo === m}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                    activo
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted",
+                    "rounded-md px-2.5 py-1 transition-colors",
+                    modo === m
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {PRESET_LABEL[p]}
+                  {m === "ahora" ? "Desde ahora" : "Horario"}
                 </button>
-              )
-            })}
+              ))}
+            </div>
           </div>
+
+          {modo === "ahora" ? (
+            <div className="grid grid-cols-2 gap-2">
+              {PRESETS_FIN.map((p) => {
+                const activo = preset === p
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPreset(p)}
+                    aria-pressed={activo}
+                    className={cn(
+                      "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      activo
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {PRESET_LABEL[p]}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="flex items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Desde</span>
+                <input
+                  type="time"
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="flex flex-1 flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Hasta</span>
+                <input
+                  type="time"
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                  aria-invalid={horarioInvalido}
+                  className={cn(
+                    "rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring",
+                    horarioInvalido ? "border-destructive" : "border-border",
+                  )}
+                />
+              </label>
+            </div>
+          )}
         </fieldset>
 
-        {seleccionados.length > 0 && (
+        {seleccionados.length > 0 && !horarioInvalido && (
           <p className="text-sm text-muted-foreground">
             {describirSujeto(seleccionados)}{" "}
             <span className="font-medium text-foreground">
               {ESTADO_META[estadoEfectivo].label.toLowerCase()}
             </span>{" "}
-            {hastaTexto}.
+            {modo === "horario" ? `de ${horaInicio} a ${horaFin}` : hastaTexto}.
           </p>
         )}
 
@@ -265,7 +332,7 @@ export function EstadoSheet({
 
         <button
           type="submit"
-          disabled={guardando || memberIds.size === 0}
+          disabled={guardando || memberIds.size === 0 || horarioInvalido}
           className="flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-95 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar"}
