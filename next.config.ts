@@ -49,9 +49,9 @@ const cabecerasSeguridad = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  // TODO(cabeceras): tras validar los reportes en producción, cambiar la clave
-  // a "Content-Security-Policy" para forzarla.
-  { key: "Content-Security-Policy-Report-Only", value: csp },
+  // CSP forzada: tras 4 días en Report-Only en producción sin rupturas, se pasa
+  // de "Content-Security-Policy-Report-Only" a la cabecera efectiva.
+  { key: "Content-Security-Policy", value: csp },
 ];
 
 const nextConfig: NextConfig = {
