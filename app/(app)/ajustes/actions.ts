@@ -150,8 +150,13 @@ export async function salirDelHogar(): Promise<Resultado> {
 /**
  * Edita nombre/rol de un integrante. Solo perfiles ADMINISTRADOS (user_id null):
  * un integrante con cuenta propia no se edita desde acá (su nombre viene de su
- * cuenta). RLS (members_update) acota al hogar; el `.is('user_id', null)` restringe
- * a los administrados.
+ * cuenta).
+ *
+ * Autorización a nivel de app vía resolverMemberObjetivo (igual que guardarBuffers):
+ * solo un RESPONSABLE puede editar, y solo perfiles administrados de su hogar. La
+ * RLS members_update es por-hogar (deja a cualquier integrante tocar filas del
+ * hogar), así que este gate es lo que impide editar a cualquiera saltándose la UI.
+ * El `.is('user_id', null)` queda como defensa en profundidad sobre el UPDATE.
  */
 export async function editarIntegrante(
   memberId: string,
@@ -163,10 +168,13 @@ export async function editarIntegrante(
   if (!esRol(input.rol)) return { error: "Elige un rol válido." }
   if (!esTipoHorario(input.tipoHorario)) return { error: "Elige un tipo de horario válido." }
 
+  const objetivo = await resolverMemberObjetivo(supabase, memberId)
+  if ("error" in objetivo) return { error: objetivo.error }
+
   const { data, error } = await supabase
     .from("members")
     .update({ display_name: nombre, rol: input.rol, tipo_horario: input.tipoHorario })
-    .eq("id", memberId)
+    .eq("id", objetivo.memberId)
     .is("user_id", null)
     .select("id")
     .maybeSingle()
