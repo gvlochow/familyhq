@@ -24,12 +24,28 @@ export type FilaFeed =
   | (Base & { clase: 'disponibilidad'; cambio: CambioDisponibilidad })
   | (Base & { clase: 'agenda'; item: AgendaItem })
 
+/** Instante local (fecha + "HH:MM") de un día. */
+function instanteEn(fecha: string, hhmm: string): DateTime {
+  const [h, m] = hhmm.split(':').map(Number)
+  return DateTime.fromISO(fecha, { zone: TZ_LOCAL }).startOf('day').set({ hour: h, minute: m })
+}
+
 /** Instante local de un item de agenda: su fecha + hora, o el inicio del día. */
 function instanteAgenda(item: AgendaItem): DateTime {
   const base = DateTime.fromISO(item.fecha, { zone: TZ_LOCAL }).startOf('day')
   if (!item.hora) return base
-  const [h, m] = item.hora.split(':').map(Number)
-  return base.set({ hour: h, minute: m })
+  return instanteEn(item.fecha, item.hora)
+}
+
+/**
+ * ¿Un EVENTO con hora ya terminó respecto de `ahora`? Su término es hora_fin, o su
+ * propia hora si no tiene término. Solo aplica a eventos con hora: una tarea
+ * vencida sigue siendo "próxima" (no se olvida), y un evento de todo el día no
+ * termina por hora.
+ */
+function eventoTerminado(item: AgendaItem, ahora: DateTime): boolean {
+  if (item.tipo !== 'evento' || !item.hora) return false
+  return instanteEn(item.fecha, item.horaFin ?? item.hora) < ahora
 }
 
 /**
@@ -43,7 +59,8 @@ export function construirFeed(
   nowISO: string,
   dias = 7,
 ): FilaFeed[] {
-  const inicioHoy = DateTime.fromISO(nowISO, { zone: TZ_LOCAL }).startOf('day')
+  const ahora = DateTime.fromISO(nowISO)
+  const inicioHoy = ahora.setZone(TZ_LOCAL).startOf('day')
   const finVentana = inicioHoy.plus({ days: dias })
 
   const filas: FilaFeed[] = cambios.map((c) => ({
@@ -57,6 +74,8 @@ export function construirFeed(
 
   for (const item of agenda) {
     if (item.tipo === 'tarea' && item.completado) continue
+    // Un evento cuyo término ya pasó no es "próximo" (una tarea vencida sí queda).
+    if (eventoTerminado(item, ahora)) continue
     const cuando = instanteAgenda(item)
     // Desde el inicio de hoy (una tarea que vence hoy sigue vigente) hasta la ventana.
     if (cuando < inicioHoy || cuando >= finVentana) continue
