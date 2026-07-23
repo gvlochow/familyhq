@@ -55,4 +55,25 @@ describe('construirFeed', () => {
     const evento = item({ id: 'e', tipo: 'evento', fecha: '2026-07-14', hora: '09:00', completado: true })
     expect(construirFeed([], [evento], NOW, 7)).toHaveLength(1)
   })
+
+  // NOW = 07:00 local.
+  it('descarta un evento del día cuyo término (hora_fin) ya pasó', () => {
+    const terminado = item({ id: 't', tipo: 'evento', fecha: '2026-07-13', hora: '05:00', horaFin: '06:00' })
+    expect(construirFeed([], [terminado], NOW, 7)).toHaveLength(0)
+  })
+
+  it('descarta un evento puntual (sin hora_fin) cuya hora ya pasó', () => {
+    const pasado = item({ id: 'p', tipo: 'evento', fecha: '2026-07-13', hora: '05:00' })
+    expect(construirFeed([], [pasado], NOW, 7)).toHaveLength(0)
+  })
+
+  it('mantiene un evento en curso (empezó pero su hora_fin no llegó)', () => {
+    const enCurso = item({ id: 'c', tipo: 'evento', fecha: '2026-07-13', hora: '06:00', horaFin: '08:00' })
+    expect(construirFeed([], [enCurso], NOW, 7)).toHaveLength(1)
+  })
+
+  it('una TAREA vencida hoy sigue en el feed (no se olvida)', () => {
+    const vencida = item({ id: 'v', tipo: 'tarea', fecha: '2026-07-13', hora: '05:00' })
+    expect(construirFeed([], [vencida], NOW, 7)).toHaveLength(1)
+  })
 })
