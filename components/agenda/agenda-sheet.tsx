@@ -84,6 +84,7 @@ export function AgendaSheet({
     editar?.asignados.map((a) => a.id) ?? [],
   )
   const [categoriaId, setCategoriaId] = useState<string | null>(editar?.categoria?.id ?? null)
+  const [notas, setNotas] = useState(editar?.notas ?? "")
   // Recurrencia. En edición, el tipo (puntual/recurrente) queda fijo: no se ofrece el toggle.
   const [repite, setRepite] = useState(editar?.recurrente ?? false)
   const [patron, setPatron] = useState<Patron>(
@@ -143,6 +144,7 @@ export function AgendaSheet({
         asignadoA: asignados,
         fechaFin: fechaFin || null,
         categoriaId,
+        notas: notas.trim() || null,
       })
     } else if (esEdicion) {
       res = await editarAgendaItem(editar!.id, {
@@ -154,6 +156,7 @@ export function AgendaSheet({
         afectaDisponibilidad: afectaFinal,
         asignadoA: asignados,
         categoriaId,
+        notas: notas.trim() || null,
       })
     } else if (repite) {
       res = await crearActividadRecurrente({
@@ -166,9 +169,10 @@ export function AgendaSheet({
         asignadoA: asignados,
         fechaFin: fechaFin || null,
         categoriaId,
+        notas: notas.trim() || null,
       })
     } else {
-      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, horaFin: horaFinFinal, afectaDisponibilidad: afectaFinal, asignadoA: asignados, categoriaId })
+      res = await crearAgendaItem({ tipo, titulo, fecha, hora: horaFinal, horaFin: horaFinFinal, afectaDisponibilidad: afectaFinal, asignadoA: asignados, categoriaId, notas: notas.trim() || null })
     }
 
     setGuardando(false)
@@ -475,6 +479,18 @@ export function AgendaSheet({
 
         {/* Categoría (opcional). */}
         <CategoriaPicker categorias={categorias} value={categoriaId} onChange={setCategoriaId} />
+
+        {/* Notas (opcional): qué llevar, un detalle. */}
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-foreground">Notas</span>
+          <textarea
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            placeholder="Qué llevar, un detalle…"
+            rows={2}
+            className="resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+        </label>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

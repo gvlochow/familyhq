@@ -54,6 +54,7 @@ export type Database = {
           hora_fin: string | null
           household_id: string
           id: string
+          notas: string | null
           tipo: string
           titulo: string
         }
@@ -71,6 +72,7 @@ export type Database = {
           hora_fin?: string | null
           household_id: string
           id?: string
+          notas?: string | null
           tipo: string
           titulo: string
         }
@@ -88,6 +90,7 @@ export type Database = {
           hora_fin?: string | null
           household_id?: string
           id?: string
+          notas?: string | null
           tipo?: string
           titulo?: string
         }
@@ -533,6 +536,7 @@ export type Database = {
           hora_fin: string | null
           household_id: string
           id: string
+          notas: string | null
           payment_link: string | null
           recurrence: Json
           reminder_offset_hours: number | null
@@ -551,6 +555,7 @@ export type Database = {
           hora_fin?: string | null
           household_id: string
           id?: string
+          notas?: string | null
           payment_link?: string | null
           recurrence: Json
           reminder_offset_hours?: number | null
@@ -569,6 +574,7 @@ export type Database = {
           hora_fin?: string | null
           household_id?: string
           id?: string
+          notas?: string | null
           payment_link?: string | null
           recurrence?: Json
           reminder_offset_hours?: number | null

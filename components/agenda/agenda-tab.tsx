@@ -9,6 +9,7 @@ import {
   CircleCheckIcon,
   PlusIcon,
   RepeatIcon,
+  StickyNoteIcon,
   Trash2Icon,
 } from "lucide-react"
 
@@ -238,6 +239,12 @@ function Fila({
           )}
           {item.agregadoPor && <span className="text-muted-foreground/70"> · por {item.agregadoPor}</span>}
         </span>
+        {item.notas && (
+          <span className="flex items-start gap-1 text-xs text-muted-foreground/80">
+            <StickyNoteIcon className="mt-0.5 size-3 shrink-0" aria-hidden />
+            <span className="line-clamp-2">{item.notas}</span>
+          </span>
+        )}
       </button>
 
       <AsignadosChips asignados={item.asignados} />

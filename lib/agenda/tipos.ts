@@ -41,6 +41,8 @@ export interface AgendaItem {
   asignados: MiembroRef[]
   /** Nombre de quién lo agregó (registro visual). */
   agregadoPor: string | null
+  /** Nota libre opcional (qué llevar, un detalle), o null. */
+  notas: string | null
   /** Categoría (nombre + color), o null si no tiene. */
   categoria: CategoriaRef | null
   /**
@@ -73,6 +75,7 @@ export interface FilaAgendaDB {
   asignado_a: string[] | null
   created_by: string | null
   categoria_id: string | null
+  notas: string | null
 }
 
 /**
@@ -99,6 +102,7 @@ export function mapearAgendaItem(
       .map((id) => miembros.get(id))
       .filter((m): m is MiembroRef => m !== undefined),
     agregadoPor: r.created_by ? (miembros.get(r.created_by)?.nombre ?? null) : null,
+    notas: r.notas && r.notas.trim() ? r.notas : null,
     categoria: r.categoria_id ? (categorias.get(r.categoria_id) ?? null) : null,
   }
 }

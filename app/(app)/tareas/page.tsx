@@ -33,7 +33,7 @@ export default async function TareasPage() {
     supabase.from("members").select("id, display_name, user_id"),
     supabase
       .from("agenda_items")
-      .select("id, tipo, titulo, fecha, hora, hora_fin, afecta_disponibilidad, completado, asignado_a, created_by, categoria_id")
+      .select("id, tipo, titulo, fecha, hora, hora_fin, afecta_disponibilidad, completado, asignado_a, created_by, categoria_id, notas")
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true, nullsFirst: true }),
     cargarCategorias(supabase),

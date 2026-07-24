@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { DateTime } from "luxon"
-import { CalendarIcon, CircleIcon, CircleCheckIcon, PlaneIcon, RepeatIcon, XIcon } from "lucide-react"
+import { CalendarIcon, CircleIcon, CircleCheckIcon, PlaneIcon, RepeatIcon, StickyNoteIcon, XIcon } from "lucide-react"
 
 import { TZ_LOCAL } from "@/lib/roster/types"
 import type { EstadoDisponibilidad } from "@/lib/availability/estado"
@@ -221,6 +221,12 @@ function AgendaFila({
             <span className="text-muted-foreground/70"> · {item.recurrenciaResumen}</span>
           )}
         </span>
+        {item.notas && (
+          <span className="flex items-start gap-1 text-xs text-muted-foreground/80">
+            <StickyNoteIcon className="mt-0.5 size-3 shrink-0" aria-hidden />
+            <span className="line-clamp-2">{item.notas}</span>
+          </span>
+        )}
       </button>
 
       <AsignadosChips asignados={item.asignados} />
