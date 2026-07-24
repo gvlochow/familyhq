@@ -29,6 +29,7 @@ function regla(over: Partial<ReglaRecurrenteDB> = {}): ReglaRecurrenteDB {
     fecha_fin: null,
     created_by: 'm2',
     categoria_id: null,
+    notas: null,
     ...over,
   }
 }
@@ -109,7 +110,7 @@ describe('expandirRecurrentes', () => {
 
 describe('proximaPorRegla', () => {
   function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
-    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'tarea', titulo: 't', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, notas: null, categoria: null, recurrente: true, recurrenteId }
   }
 
   it('deja una fila por regla: su ocurrencia más temprana', () => {
@@ -142,7 +143,7 @@ describe('proximaPorRegla', () => {
 
 describe('primeraPorRegla (cumpleaños / fechas anuales)', () => {
   function oc(recurrenteId: string, fecha: string, completado = false): AgendaItem {
-    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'evento', titulo: 'Cumple', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, categoria: null, recurrente: true, recurrenteId }
+    return { id: `rec:${recurrenteId}:${fecha}`, tipo: 'evento', titulo: 'Cumple', fecha, hora: null, horaFin: null, afectaDisponibilidad: false, completado, asignados: [], agregadoPor: null, notas: null, categoria: null, recurrente: true, recurrenteId }
   }
 
   it('deja una fila por regla: la más temprana, aunque esté completada', () => {

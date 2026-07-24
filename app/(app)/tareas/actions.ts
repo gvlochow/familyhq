@@ -17,6 +17,12 @@ type Resultado = { error?: string }
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d$/
+const MAX_NOTAS = 500
+
+/** Nota libre para guardar: recortada y acotada; vacía -> null. */
+function limpiarNotas(raw: string | null | undefined): string | null {
+  return raw?.trim().slice(0, MAX_NOTAS) || null
+}
 
 /**
  * Normaliza la hora de término de un evento. Solo aplica a tipo 'evento' con hora
@@ -134,6 +140,7 @@ export async function crearAgendaItem(input: {
   afectaDisponibilidad?: boolean
   asignadoA?: string[]
   categoriaId?: string | null
+  notas?: string | null
 }): Promise<Resultado> {
   const supabase = await createClient()
   const miembro = await miembroActual(supabase)
@@ -164,6 +171,7 @@ export async function crearAgendaItem(input: {
     asignado_a: asignadoA,
     created_by: miembro.id,
     categoria_id: categoriaId,
+    notas: limpiarNotas(input.notas),
   })
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
 
@@ -184,6 +192,7 @@ export async function editarAgendaItem(
     afectaDisponibilidad?: boolean
     asignadoA?: string[]
     categoriaId?: string | null
+    notas?: string | null
   },
 ): Promise<Resultado> {
   const supabase = await createClient()
@@ -205,7 +214,7 @@ export async function editarAgendaItem(
 
   const { data, error } = await supabase
     .from("agenda_items")
-    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, hora_fin: rf.horaFin, afecta_disponibilidad: afecta, asignado_a: asignadoA, categoria_id: categoriaId })
+    .update({ tipo: input.tipo, titulo, fecha: input.fecha, hora, hora_fin: rf.horaFin, afecta_disponibilidad: afecta, asignado_a: asignadoA, categoria_id: categoriaId, notas: limpiarNotas(input.notas) })
     .eq("id", id)
     .select("id")
     .maybeSingle()
@@ -231,6 +240,7 @@ export async function crearActividadRecurrente(input: {
   asignadoA?: string[]
   fechaFin?: string | null
   categoriaId?: string | null
+  notas?: string | null
 }): Promise<Resultado> {
   const supabase = await createClient()
   const miembro = await miembroActual(supabase)
@@ -265,6 +275,7 @@ export async function crearActividadRecurrente(input: {
     fecha_fin: fechaFin,
     created_by: miembro.id,
     categoria_id: categoriaId,
+    notas: limpiarNotas(input.notas),
   })
   if (error) return { error: "No se pudo guardar. Intenta de nuevo." }
 
@@ -286,6 +297,7 @@ export async function editarActividadRecurrente(
     asignadoA?: string[]
     fechaFin?: string | null
     categoriaId?: string | null
+    notas?: string | null
   },
 ): Promise<Resultado> {
   const supabase = await createClient()
@@ -319,6 +331,7 @@ export async function editarActividadRecurrente(
       asignado_a: asignadoA,
       fecha_fin: fechaFin,
       categoria_id: categoriaId,
+      notas: limpiarNotas(input.notas),
     })
     .eq("id", ruleId)
     .select("id")

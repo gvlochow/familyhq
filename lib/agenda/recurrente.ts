@@ -25,6 +25,7 @@ export interface ReglaRecurrenteDB {
   fecha_fin: string | null
   created_by: string | null
   categoria_id: string | null
+  notas: string | null
 }
 
 /**
@@ -63,6 +64,7 @@ export function expandirRecurrentes(
       .map((id) => miembros.get(id))
       .filter((m): m is MiembroRef => m !== undefined)
     const agregadoPor = regla.created_by ? (miembros.get(regla.created_by)?.nombre ?? null) : null
+    const notas = regla.notas && regla.notas.trim() ? regla.notas : null
     const categoria = regla.categoria_id ? (categorias.get(regla.categoria_id) ?? null) : null
 
     for (const fecha of ocurrencias(regla.recurrence, desdeISO, hastaISO, regla.fecha_inicio, regla.fecha_fin)) {
@@ -78,6 +80,7 @@ export function expandirRecurrentes(
         completado: completadas.has(`${regla.id}:${fecha}`),
         asignados,
         agregadoPor,
+        notas,
         recurrente: true,
         recurrenteId: regla.id,
         recurrenciaResumen: resumen,
